@@ -10,7 +10,7 @@ data class AppInformation private constructor(
     val appName: String,
     val appNamePinyin: String,
     val icon: Drawable,
-    var checkFlag: Boolean = false
+    val checkFlag: Boolean = false
 ) : Comparable<AppInformation> {
 
     constructor(packageName: String, appName: String, icon: Drawable) : this(
@@ -24,14 +24,12 @@ data class AppInformation private constructor(
         icon,
     )
 
-    override fun compareTo(other: AppInformation): Int {
-        return if (checkFlag && !other.checkFlag) {
-
+    override fun compareTo(other: AppInformation) =
+        if (checkFlag && !other.checkFlag) {
             -11
         } else if (!checkFlag && other.checkFlag) {
             1
         } else {
             appNamePinyin.compareTo(other.appNamePinyin)
         }
-    }
 }

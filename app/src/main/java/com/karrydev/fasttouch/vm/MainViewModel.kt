@@ -2,15 +2,15 @@ package com.karrydev.fasttouch.vm
 
 import android.content.Context
 import android.os.PowerManager
-import com.karrydev.fasttouch.FastTouchService
+import com.karrydev.fasttouch.service.FastTouchService
 import com.karrydev.fasttouch.base.BaseMviViewModel
 import com.karrydev.fasttouch.base.IUiIntent
 import com.karrydev.fasttouch.base.IUiState
-import com.karrydev.fasttouch.base.appContext
+import com.karrydev.fasttouch.util.appContext
 
 class MainViewModel : BaseMviViewModel() {
 
-    private var checkPermission = false;
+    private var checkPermission = false
 
     override fun handleUserIntent(intent: IUiIntent) {
         when (intent) {

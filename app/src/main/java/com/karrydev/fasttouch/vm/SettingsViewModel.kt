@@ -1,6 +1,6 @@
 package com.karrydev.fasttouch.vm
 
-import com.karrydev.fasttouch.FastTouchService
+import com.karrydev.fasttouch.service.FastTouchService
 import com.karrydev.fasttouch.base.BaseMviViewModel
 import com.karrydev.fasttouch.base.IUiIntent
 import com.karrydev.fasttouch.base.IUiState

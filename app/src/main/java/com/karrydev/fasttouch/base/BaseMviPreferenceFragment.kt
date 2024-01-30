@@ -1,6 +1,5 @@
 package com.karrydev.fasttouch.base
 
-import android.widget.Toast
 import androidx.preference.PreferenceFragmentCompat
 import kotlinx.coroutines.flow.Flow
 
@@ -12,9 +11,5 @@ abstract class BaseMviPreferenceFragment<VM : BaseMviViewModel> : PreferenceFrag
 
     protected fun stateFlowHandle(flow: Flow<IUiState>, block: (state: IUiState) -> Unit) {
         baseMviUi.stateFlowHandle(flow, block)
-    }
-
-    protected fun showToast(msg: String, during: Int = Toast.LENGTH_SHORT) {
-        baseMviUi.showToast(msg, during)
     }
 }

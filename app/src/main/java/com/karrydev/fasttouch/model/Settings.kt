@@ -8,12 +8,8 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import com.google.gson.reflect.TypeToken
-import com.karrydev.fasttouch.FastTouchApp
-import com.karrydev.fasttouch.base.appContext
+import com.karrydev.fasttouch.util.appContext
 import java.util.TreeMap
-import kotlin.reflect.javaType
-import kotlin.reflect.typeOf
 
 /**
  * 用户设置类
@@ -63,7 +59,7 @@ object Settings {
      * 应用白名单列表
      */
     private const val WHITELIST_PACKAGE = "WHITELIST_PACKAGE"
-    var whiteList = HashSet<String>()
+    var whiteListSet = HashSet<String>()
         set(value) {
             field.clear()
             field.addAll(value)
@@ -79,7 +75,7 @@ object Settings {
      * 用户添加的控件集合
      */
     private const val PACKAGE_WIDGETS_LIST = "PACKAGE_WIDGETS_LIST"
-    var mapPackageWidgets = TreeMap<String, Set<PackageWidgetDescription>>()
+    var pkgWidgetMap = TreeMap<String, Set<PackageWidgetDescription>>()
         set(value) {
             field = value
             editor.putString(PACKAGE_WIDGETS_LIST, gson.toJson(field))
@@ -87,7 +83,7 @@ object Settings {
         }
     fun setPackageWidgetsInString(value: String): Boolean {
         return try {
-            mapPackageWidgets = gson.fromJson(value, TreeMap<String, Set<PackageWidgetDescription>>().javaClass)
+            pkgWidgetMap = gson.fromJson(value, TreeMap<String, Set<PackageWidgetDescription>>().javaClass)
             true
         } catch (e: JsonSyntaxException) {
             false
@@ -98,7 +94,7 @@ object Settings {
      * 用户添加的坐标集合
      */
     private const val PACKAGE_POSITIONS_LIST = "PACKAGE_POSITIONS_LIST"
-    var mapPackagePositions = TreeMap<String, PackagePositionDescription>()
+    var pkgPosMap = TreeMap<String, PackagePositionDescription>()
         set(value) {
             field = value
             editor.putString(PACKAGE_POSITIONS_LIST, gson.toJson(field))
@@ -142,18 +138,18 @@ object Settings {
             }
         }
         // 把这个包也放入白名单
-        sp.getStringSet(WHITELIST_PACKAGE, sysPkgSet)?.let { whiteList.addAll(it) }
+        sp.getStringSet(WHITELIST_PACKAGE, sysPkgSet)?.let { whiteListSet.addAll(it) }
 
         // 加载用户添加的控件
         json = sp.getString(PACKAGE_WIDGETS_LIST, null)
         if (json != null) {
-            mapPackageWidgets.putAll(gson.fromJson(json, TreeMap<String, Set<PackageWidgetDescription>>().javaClass))
+            pkgWidgetMap.putAll(gson.fromJson(json, TreeMap<String, Set<PackageWidgetDescription>>().javaClass))
         }
 
         // 加载用户添加的坐标
         json = sp.getString(PACKAGE_POSITIONS_LIST, null)
         if (json != null) {
-            mapPackagePositions.putAll(gson.fromJson(json, TreeMap<String, PackagePositionDescription>().javaClass))
+            pkgPosMap.putAll(gson.fromJson(json, TreeMap<String, PackagePositionDescription>().javaClass))
         }
     }
 }

@@ -1,9 +1,9 @@
-package com.karrydev.fasttouch.broadcast
+package com.karrydev.fasttouch.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.karrydev.fasttouch.FastTouchService
+import com.karrydev.fasttouch.service.FastTouchService
 
 class UserPresentReceiver : BroadcastReceiver() {
 

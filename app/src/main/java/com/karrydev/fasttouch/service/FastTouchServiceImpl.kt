@@ -1,9 +1,8 @@
-package com.karrydev.fasttouch
+package com.karrydev.fasttouch.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -15,9 +14,7 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
-import android.provider.ContactsContract.Data
 import android.util.DisplayMetrics
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -31,30 +28,25 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.databinding.DataBindingUtil
-import androidx.lifecycle.ServiceLifecycleDispatcher
-import com.google.gson.Gson
-import com.karrydev.fasttouch.base.Utils
-import com.karrydev.fasttouch.base.appContext
-import com.karrydev.fasttouch.base.isDebug
-import com.karrydev.fasttouch.broadcast.PackageChangeReceiver
-import com.karrydev.fasttouch.broadcast.UserPresentReceiver
+import com.karrydev.fasttouch.R
+import com.karrydev.fasttouch.receiver.PackageChangeReceiver
+import com.karrydev.fasttouch.receiver.UserPresentReceiver
 import com.karrydev.fasttouch.databinding.LayoutCustomizationDialogBinding
 import com.karrydev.fasttouch.model.PackagePositionDescription
 import com.karrydev.fasttouch.model.PackageWidgetDescription
 import com.karrydev.fasttouch.model.Settings
-import java.util.Date
+import com.karrydev.fasttouch.util.DLog
+import com.karrydev.fasttouch.util.describeAccessibilityNode
 import java.util.Deque
 import java.util.LinkedList
-import java.util.TreeMap
 import java.util.concurrent.*
 import kotlin.math.roundToInt
 
 class FastTouchServiceImpl(private val service: AccessibilityService) {
 
-    private val TAG = "FastTouchServiceImpl"
     private val selfPkgName = "开屏跳过"
-    private lateinit var curPkgName: String
-    private lateinit var curActName: String
+    private var curPkgName = ""
+    private var curActName = ""
 
     @Volatile
     private var skipAdTaskRunning = false
@@ -68,41 +60,42 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
     /**
      * 当前应用的包名
      */
-    private lateinit var packageName: String
-    private lateinit var packageManager: PackageManager
+    private var packageName = service.packageName
+    private var packageManager = service.packageManager
     /**
-     * 所有可跳过的包集合
+     * 所有需要跳过的包集合
      */
-    private lateinit var setPackages: HashSet<String>
+    private val touchPkgSet = HashSet<String>()
     /**
      * 输入法App集合
      */
-    private lateinit var setIMEApps: HashSet<String>
+    private val imeAppSet = HashSet<String>()
     /**
      * 白名单集合
      */
-    private lateinit var setWhiteList: HashSet<String>
-    private lateinit var mapPackagePositions: TreeMap<String, PackagePositionDescription>
-    private lateinit var mapPackageWidgets: TreeMap<String, Set<PackageWidgetDescription>>
+    private val whiteListSet = Settings.whiteListSet
+    private var pkgPosMap = Settings.pkgPosMap
+    private val pkgWidgetMap = Settings.pkgWidgetMap
+    private val keywordList = Settings.keywordList
+    private val clickedWidgets = HashSet<String>()
+
     @Volatile
-    private var setTargetedWidgets: Set<PackageWidgetDescription>? = null
-
-    private lateinit var packageChangeReceiver: PackageChangeReceiver
-    private lateinit var userPresentReceiver: UserPresentReceiver
-
-    private lateinit var settings: Settings
-    private lateinit var keywordList: ArrayList<String>
-    private lateinit var clickedWidgets: HashSet<String>
-    private lateinit var skipAdExecutorService: ScheduledExecutorService
-    lateinit var mainHandler: Handler
-
+    private var targetedWidgetSet: Set<PackageWidgetDescription>? = null
+    private val pkgChangeReceiver by lazy { PackageChangeReceiver() }
+    private val userPresentReceiver by lazy { UserPresentReceiver() }
+    private val skipAdExecutorService by lazy { Executors.newSingleThreadScheduledExecutor() }
     private var customizationDialogShowing = false
-    private lateinit var customizationDialogView: View
-    private lateinit var dialogBinding: LayoutCustomizationDialogBinding
-    private lateinit var frameOutlineLayout: FrameLayout
-    private lateinit var imgPositionTarget: ImageView
+
+    private var customizationDialogView: View? = null
+    private var dialogBinding: LayoutCustomizationDialogBinding? = null
+    private var frameOutlineLayout: FrameLayout? = null
+    private val imgPositionTarget = ImageView(service)
+
+    val mainHandler by lazy { initMainHandler() }
 
     companion object {
+        const val TAG = "FastTouchServiceImpl"
+
         // 第一次在300ms以后，每500ms再点击一次，总共尝试5次点击
         const val PACKAGE_POSITION_CLICK_FIRST_DELAY = 300L
         const val PACKAGE_POSITION_CLICK_RETRY_INTERVAL = 500L
@@ -110,89 +103,66 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
     }
 
     fun onServiceConnected() {
-        // 初始化参数
-        curPkgName = "Init PackageName"
-        curActName = "Init PackageName"
-
-        packageName = service.packageName
-
-        // 从 SharedPreferences 获取 settings
-        settings = Settings
-
-        // 获取 keywords
-        keywordList = settings.keywordList
-
-        // 获取白名单
-        setWhiteList = settings.whiteList
-
         // 找到所有的包
-        packageManager = service.packageManager
         findAllPackages()
-
-        // 加载用户添加的 坐标 和 控件
-        mapPackagePositions = settings.mapPackagePositions
-        mapPackageWidgets = settings.mapPackageWidgets
 
         // 初始化主线程 Handler 和 Receiver
         initReceiverAndHandler()
-
-        // 初始化已点击的 widget 集合
-        clickedWidgets = HashSet()
-
-        // 创建线程池用于执行任务服务
-        skipAdExecutorService = Executors.newSingleThreadScheduledExecutor()
-//        skipAdExecutorService = Executors.newScheduledThreadPool(8)
-
-
+        
         // 初始化用户自定义添加弹窗相关
         initCustomizationDialog()
     }
 
     private fun initReceiverAndHandler() {
         // 启动【应用安装】和【应用卸载】的广播接收器
-        userPresentReceiver = UserPresentReceiver()
         service.registerReceiver(userPresentReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
 
         // 启动【设备唤醒】的广播接收器
-        packageChangeReceiver = PackageChangeReceiver()
         val intentFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
         }
-        service.registerReceiver(packageChangeReceiver, intentFilter)
+        service.registerReceiver(pkgChangeReceiver, intentFilter)
+    }
 
-        // 初始化 mainHandler 来处理 broadcast 的消息
-        mainHandler = Handler(Looper.getMainLooper()) { msg ->
-            when (msg.what) {
-                FastTouchService.ACTION_REFRESH_KEYWORDS -> { // 更新 keywords
-                    keywordList = settings.keywordList
-                }
-                FastTouchService.ACTION_REFRESH_PACKAGE -> { // 更新 package 列表
-                    // 这里可能是用户设置【白名单】发生了变化，也可能是有【新应用安装】或发生【应用卸载】
-                    setWhiteList = settings.whiteList
-                    findAllPackages()
-                }
-                FastTouchService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS -> { // 更新用户自定义跳过的内容
-                    mapPackagePositions = settings.mapPackagePositions
-                    mapPackageWidgets = settings.mapPackageWidgets
-                }
-                FastTouchService.ACTION_STOP_SERVICE -> { // 关闭无障碍服务
-                    service.disableSelf()
-                }
-                FastTouchService.ACTION_SHOW_CUSTOMIZATION_DIALOG -> { // 打开用户自定义跳过方法弹窗
-                    if (!customizationDialogShowing) {
-                        showCustomizationDialog()
-                    }
-                }
-                FastTouchService.ACTION_START_TASK -> { // 开启 skip-ad 任务
-                    startSkipAdTask()
-                }
-                FastTouchService.ACTION_STOP_TASK -> { // 结束 skip-ad 任务
-                    stopSkipAdTaskInner()
+    /**
+     * 初始化 mainHandler
+     * 处理 broadcast 的消息
+     */
+    private fun initMainHandler() = Handler(Looper.getMainLooper()) { msg ->
+        when (msg.what) {
+            FastTouchService.ACTION_REFRESH_KEYWORDS -> { // 更新 keywords
+                keywordList.clear()
+                keywordList.addAll(Settings.keywordList)
+            }
+            FastTouchService.ACTION_REFRESH_PACKAGE -> { // 更新 package 列表
+                // 这里可能是用户设置【白名单】发生了变化，也可能是有【新应用安装】或发生【应用卸载】
+                whiteListSet.clear()
+                whiteListSet.addAll(Settings.whiteListSet)
+                findAllPackages()
+            }
+            FastTouchService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS -> { // 更新用户自定义跳过的内容
+                pkgPosMap.clear()
+                pkgWidgetMap.clear()
+                pkgPosMap.putAll(Settings.pkgPosMap)
+                pkgWidgetMap.putAll(Settings.pkgWidgetMap)
+            }
+            FastTouchService.ACTION_STOP_SERVICE -> { // 关闭无障碍服务
+                service.disableSelf()
+            }
+            FastTouchService.ACTION_SHOW_CUSTOMIZATION_DIALOG -> { // 打开用户自定义跳过方法弹窗
+                if (!customizationDialogShowing) {
+                    showCustomizationDialog()
                 }
             }
-            true
+            FastTouchService.ACTION_START_TASK -> { // 开启 skip-ad 任务
+                startSkipAdTask()
+            }
+            FastTouchService.ACTION_STOP_TASK -> { // 结束 skip-ad 任务
+                stopSkipAdTaskInner()
+            }
         }
+        true
     }
 
     /**
@@ -240,21 +210,22 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
      * 使用两种方法去尝试跳过【控件跳过】【关键词跳过】
      */
     fun onAccessibilityEvent(event: AccessibilityEvent) {
+        val threadService = skipAdExecutorService ?: return
         val packageName = event.packageName.toString() // 包名
         val className = event.className.toString() // 类名
         if (packageName.isEmpty() || className.isEmpty()) return
 
-
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                if (setIMEApps.contains(packageName)) {
+                DLog.d(TAG, "window state changed $packageName")
+                if (imeAppSet.contains(packageName)) {
                     // 忽略输入法App，它可能会短暂启动
                     return
                 }
-                // 先判断当前的 pkg 是不是新的包以及是不是一个 Activity
-                // 是新 pkg && 是新 Activity -> 记录当前 pkg 和 class，如果 pkg 在跳过列表内，则启动跳过任务
-                // 不是新 pkg && 是新 Activity -> 记录当前 class
-                val isActivity = !className.startsWith("android.") && !className.startsWith("androidx.")
+                // 先判断当前的 pkg 是不是不同的包以及是不是一个 Activity
+                // 不同的 pkg && 是新 Activity -> 记录当前 pkg 和 class，如果 pkg 在跳过列表内，则启动跳过任务
+                // 相同的 pkg && 是新 Activity -> 记录当前 class
+                val isActivity = !className.startsWith("android.") && !className.startsWith("androidx.") && !className.endsWith("launcher", true)
                 if (curPkgName != packageName) {
                     // 是新包
                     if (isActivity) {
@@ -265,8 +236,14 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                         // 如果当前有任务的话，先结束
                         stopSkipAdTask()
                         // 开启一个新任务
-                        startSkipAdTask()
+                        if (touchPkgSet.contains(packageName)) {
+                            // 只有在白名单内的应用才会启动
+                            // 这里是唯一一处启动任务的地方
+                            startSkipAdTask()
+                        }
                     } else {
+                        curPkgName = ""
+                        curActName = ""
                         return
                     }
                 } else {
@@ -281,6 +258,8 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                             return
                         }
                     } else {
+                        curPkgName = ""
+                        curActName = ""
                         return
                     }
                 }
@@ -295,66 +274,77 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                     // 避免重复执行
                     skipAdByActivityPosition = false
 
-                    val packagePositionDescription = mapPackagePositions[curPkgName]
+                    val packagePositionDescription = pkgPosMap[curPkgName]
                     if (packagePositionDescription != null) {
-                        showToastHandler("正在根据位置跳过广告...")
 
                         // 尝试多次点击指定位置
-                        var num = 0
-                        var futures: ScheduledFuture<*>? = null
-                        futures = skipAdExecutorService.scheduleAtFixedRate({
-                            if (num < PACKAGE_POSITION_CLICK_RETRY_TIME) {
-                                if (curActName == packagePositionDescription.activityName) {
-                                    simulatedClick(packagePositionDescription.x, packagePositionDescription.y , 0, 40)
-                                }
-                                num++
-                            } else {
-                                futures?.cancel(true)
-                            }
-                        }, PACKAGE_POSITION_CLICK_FIRST_DELAY, PACKAGE_POSITION_CLICK_RETRY_INTERVAL, TimeUnit.MILLISECONDS)
+//                        var num = 0
+//                        var futures: ScheduledFuture<*>? = null
+//                        futures = skipAdExecutorService.scheduleAtFixedRate({
+//                            if (num < PACKAGE_POSITION_CLICK_RETRY_TIME) {
+//                                if (curActName == packagePositionDescription.activityName) {
+//                                    simulatedClick(packagePositionDescription.x, packagePositionDescription.y , 0, 40)
+//                                }
+//                                num++
+//                            } else {
+//                                futures?.cancel(true)
+//                            }
+//                        }, PACKAGE_POSITION_CLICK_FIRST_DELAY, PACKAGE_POSITION_CLICK_RETRY_INTERVAL, TimeUnit.MILLISECONDS)
+
+                        // 仅点击一次 TODO 验证是否有问题
+                        if (curActName == packagePositionDescription.activityName) {
+                            DLog.d(TAG, "正在根据位置跳过广告...")
+                            showToastHandler("正在根据位置跳过广告...")
+                            simulatedClick(packagePositionDescription.x, packagePositionDescription.y , 0, 40)
+                        }
                     }
                 }
 
-                // 【控件跳过】
+                // 先查找指定控件
                 if (skipAdByActivityWidget) {
                     // 只需要查找一次
                     skipAdByActivityWidget = false
                     // 获取到用户指定的控件
-                    setTargetedWidgets = mapPackageWidgets[curPkgName]
+                    targetedWidgetSet = pkgWidgetMap[curPkgName]
                 }
-                if (setTargetedWidgets != null) {
+                // 【控件跳过】
+                if (targetedWidgetSet != null) {
                     // 这个代码块可能会执行多次
                     val node = service.rootInActiveWindow
-                    val widgets = setTargetedWidgets
-                    skipAdExecutorService.execute { iterateNodesToSkipAd(node, widgets) }
+                    val widgets = targetedWidgetSet
+                    threadService.execute { iterateNodesToSkipAd(node, widgets) }
                 }
 
                 // 【关键词跳过】可能会执行多次
                 val node = service.rootInActiveWindow
-                skipAdExecutorService.execute { iterateNodesToSkipAd(node) }
+                threadService.execute { iterateNodesToSkipAd(node) }
             }
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                if (!setPackages.contains(packageName)) return
+                DLog.d(TAG, "window content changed $packageName")
+                // 若跳过任务未启动则不响应该事件
+                if (!skipAdTaskRunning) return
+                if (!touchPkgSet.contains(packageName)) return
 
                 val node = event.source
                 if (node != null) {
                     // 【控件跳过】
-                    if (setTargetedWidgets != null) {
-                        val widget = setTargetedWidgets
-                        skipAdExecutorService.execute { iterateNodesToSkipAd(node, widget) }
+                    if (targetedWidgetSet != null) {
+                        val widget = targetedWidgetSet
+                        threadService.execute { iterateNodesToSkipAd(node, widget) }
                     }
 
                     // 【关键词跳过】
                     if (skipAdByKeyword) {
-                        skipAdExecutorService.execute { iterateNodesToSkipAd(node) }
+                        threadService.execute { iterateNodesToSkipAd(node) }
                     }
                 }
             }
+            else -> {}
         }
     }
 
     fun onUnbind(intent: Intent?) {
-        service.unregisterReceiver(packageChangeReceiver)
+        service.unregisterReceiver(pkgChangeReceiver)
         service.unregisterReceiver(userPresentReceiver)
     }
 
@@ -365,9 +355,6 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
      * @param set 控件集合
      */
     private fun iterateNodesToSkipAd(root: AccessibilityNodeInfo, set: Set<PackageWidgetDescription>? = null) {
-        val pkgName = root.packageName.toString()
-        if (!setPackages.contains(pkgName)) return
-
         val nodeQueue: Deque<AccessibilityNodeInfo> = LinkedList()
         nodeQueue.offer(root)
 
@@ -415,11 +402,12 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         }
         // 如果找到某个 node 则尝试点击它
         if (isFound) {
-            val nodeDesc = Utils.describeAccessibilityNode(node)
+            val nodeDesc = describeAccessibilityNode(node)
             if (!clickedWidgets.contains(nodeDesc)) {
                 // 避免重复点击
                 clickedWidgets.add(nodeDesc)
 
+                DLog.d(TAG, "正在根据关键字跳过广告...")
                 showToastHandler("正在根据关键字跳过广告...")
 
                 val clicked = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -468,12 +456,13 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
 
             if (isFound) {
                 // 找到了用户指定的控件
-                val nodeDesc = Utils.describeAccessibilityNode(node)
+                val nodeDesc = describeAccessibilityNode(node)
 
                 if (!clickedWidgets.contains(nodeDesc)) {
                     // 避免重复点击
                     clickedWidgets.add(nodeDesc)
 
+                    DLog.d(TAG, "正在根据控件跳过广告...")
                     showToastHandler("正在根据控件跳过广告...")
 
                     if (pwd.onlyClick) {
@@ -487,7 +476,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                     }
 
                     // 清空该集合引用，避免后续重复使用
-                    if (setTargetedWidgets == set) setTargetedWidgets = null
+                    if (targetedWidgetSet == set) targetedWidgetSet = null
                     return true
                 }
             }
@@ -500,39 +489,39 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
      * 找到所有的包，添加包/删除包也会触发该方法
      */
     private fun findAllPackages() {
-        setPackages = HashSet()
-        setIMEApps = HashSet()
-        val setTemps = HashSet<String>()
+        touchPkgSet.clear()
+        imeAppSet.clear()
+        val tempSet = HashSet<String>()
 
         // 找到所有启动器
         var intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         var resolveInfoList = packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
         resolveInfoList.forEach { info ->
-            setPackages.add(info.activityInfo.packageName)
+            touchPkgSet.add(info.activityInfo.packageName)
         }
 
         // 找到桌面
         intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         resolveInfoList = packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
         resolveInfoList.forEach { info ->
-            setTemps.add(info.activityInfo.packageName)
+            tempSet.add(info.activityInfo.packageName)
         }
 
         // 找到所有输入法
         val inputMethodInfoList = (service.getSystemService(AccessibilityService.INPUT_METHOD_SERVICE) as InputMethodManager).inputMethodList
         inputMethodInfoList.forEach { info ->
-            setIMEApps.add(info.packageName)
+            imeAppSet.add(info.packageName)
         }
 
         // 忽略一些特定的包
-        setTemps.add(packageName)
-        setTemps.add("com.android.settings")
+        tempSet.add(packageName)
+        tempSet.add("com.android.settings")
 
         // 移除掉所有白名单应用、系统应用、桌面以及一些特殊的包，最终得到的就是可以进行开屏跳过的包集合 setPackages
-        setPackages.apply {
-            removeAll(setWhiteList)
-            removeAll(setIMEApps)
-            removeAll(setTemps)
+        touchPkgSet.apply {
+            removeAll(whiteListSet)
+            removeAll(imeAppSet)
+            removeAll(tempSet)
         }
     }
 
@@ -542,15 +531,14 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
     private fun initCustomizationDialog() {
         // 创建弹窗布局
         val inflater = LayoutInflater.from(service)
-        customizationDialogView = inflater.inflate(R.layout.layout_customization_dialog, null)
-        dialogBinding = DataBindingUtil.bind(customizationDialogView)!!
+        val customizationDialogView = inflater.inflate(R.layout.layout_customization_dialog, null)
+        dialogBinding = DataBindingUtil.bind(customizationDialogView)
+        this.customizationDialogView = customizationDialogView
 
         // 创建【显示布局】功能的顶层 frame
-        frameOutlineLayout = inflater.inflate(R.layout.layout_description_layout_frame, null)
-            .findViewById(R.id.frame)
+        frameOutlineLayout = inflater.inflate(R.layout.layout_description_layout_frame, null).findViewById(R.id.frame)
 
         // 创建准心图片
-        imgPositionTarget = ImageView(service)
         imgPositionTarget.setImageResource(R.drawable.ic_target)
     }
 
@@ -586,7 +574,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
     private fun dumpChildNodes(root: AccessibilityNodeInfo?, list: ArrayList<AccessibilityNodeInfo>, dumpString: StringBuilder, indent: String) {
         if (root == null) return
         list.add(root)
-        dumpString.append(indent + Utils.describeAccessibilityNode(root) + "\n")
+        dumpString.append(indent + describeAccessibilityNode(root) + "\n")
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i)
@@ -666,7 +654,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         windowManager.addView(imgPositionTarget, positionTargetParams)
 
         // 实现弹窗的拖动，这里可能可以忽略X轴
-        customizationDialogView.setOnTouchListener(object: View.OnTouchListener {
+        customizationDialogView?.setOnTouchListener(object: View.OnTouchListener {
 //            var x = 0
             var y = 0
 
@@ -690,8 +678,9 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
             }
         })
 
+        val binding = dialogBinding ?: return
         // 【显示布局】
-        dialogBinding.btnShowOutline.setOnClickListener {
+        binding.btnShowOutline.setOnClickListener {
             val btn = it as Button
             // 根据 frame 的是否透明来确定是否开启了该功能
             if (frameOutlineParams.alpha == 0f) {
@@ -699,7 +688,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                 val root = service.rootInActiveWindow ?: return@setOnClickListener
                 widgetDescription.packageName = curPkgName
                 widgetDescription.activityName = curActName
-                frameOutlineLayout.removeAllViews()
+                frameOutlineLayout?.removeAllViews()
 
                 // 获取 root 下所有子控件
                 val roots = ArrayList<AccessibilityNodeInfo>()
@@ -739,7 +728,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                                     description = if (node.contentDescription != null) node.contentDescription.toString() else ""
                                     text = if (node.text != null) node.text.toString() else ""
 
-                                    dialogBinding.apply {
+                                    binding.apply {
                                         btnAddWidget.isEnabled = true
                                         tvPackageName.text = packageName
                                         tvActivityName.text = activityName
@@ -756,7 +745,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                         }
                     }
 
-                    frameOutlineLayout.addView(img, params)
+                    frameOutlineLayout?.addView(img, params)
                 }
 
                 frameOutlineParams.alpha = 0.5f
@@ -765,8 +754,8 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 // TODO 这里的frameOutlineLayout可能有问题
                 windowManager.updateViewLayout(frameOutlineLayout, frameOutlineParams)
-                dialogBinding.tvPackageName.text = widgetDescription.packageName
-                dialogBinding.tvActivityName.text = widgetDescription.activityName
+                binding.tvPackageName.text = widgetDescription.packageName
+                binding.tvActivityName.text = widgetDescription.activityName
                 btn.text = "隐藏布局"
             } else {
                 // 隐藏布局
@@ -776,29 +765,29 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                         WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                 windowManager.updateViewLayout(frameOutlineLayout, frameOutlineParams)
-                dialogBinding.btnAddWidget.isEnabled = false
+                binding.btnAddWidget.isEnabled = false
                 btn.text = "显示布局"
             }
         }
 
         // 【添加控件】
-        dialogBinding.btnAddWidget.setOnClickListener {
+        binding.btnAddWidget.setOnClickListener {
             val widgetDesc = PackageWidgetDescription(widgetDescription)
-            var set = mapPackageWidgets[widgetDescription.packageName] as HashSet?
+            var set = pkgWidgetMap[widgetDescription.packageName] as HashSet?
             if (set == null) {
                 set = HashSet()
                 set.add(widgetDesc)
-                mapPackageWidgets[widgetDescription.packageName] = set
+                pkgWidgetMap[widgetDescription.packageName] = set
             }
-            dialogBinding.btnAddWidget.isEnabled = false
-            dialogBinding.tvPackageName.text = "${widgetDescription.packageName} (以下控件数据已保存)"
+            binding.btnAddWidget.isEnabled = false
+            binding.tvPackageName.text = "${widgetDescription.packageName} (以下控件数据已保存)"
 
             // 更新设置，记录用户选中的控件
-            settings.mapPackageWidgets = mapPackageWidgets
+            Settings.pkgWidgetMap = pkgWidgetMap
         }
 
         // 【显示准心】
-        dialogBinding.btnShowTarget.setOnClickListener {
+        binding.btnShowTarget.setOnClickListener {
             val btn = it as Button
             // 根据 image 的是否透明来确定是否开启了该功能
             if (positionTargetParams.alpha == 0f) {
@@ -809,8 +798,8 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                         WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 windowManager.updateViewLayout(imgPositionTarget, positionTargetParams)
-                dialogBinding.tvPackageName.text = positionDescription.packageName
-                dialogBinding.tvActivityName.text = positionDescription.activityName
+                binding.tvPackageName.text = positionDescription.packageName
+                binding.tvActivityName.text = positionDescription.activityName
                 btn.text = "隐藏准心"
             } else {
                 // 隐藏准心
@@ -820,7 +809,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                         WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                 windowManager.updateViewLayout(imgPositionTarget, positionTargetParams)
-                dialogBinding.btnAddPosition.isEnabled = false
+                binding.btnAddPosition.isEnabled = false
                 btn.text = "显示准心"
             }
         }
@@ -836,7 +825,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                 if (event != null) {
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
-                            dialogBinding.btnAddPosition.isEnabled = true
+                            binding.btnAddPosition.isEnabled = true
                             positionTargetParams.alpha = 0.9f
                             windowManager.updateViewLayout(imgPositionTarget, positionTargetParams)
 
@@ -855,9 +844,9 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                                 activityName = curActName
                                 x = positionTargetParams.x + targetWidth
                                 y = positionTargetParams.y + targetHeight
-                                dialogBinding.tvPackageName.text = packageName
-                                dialogBinding.tvActivityName.text = activityName
-                                dialogBinding.tvPositionInfo.text = "X轴：$x  Y轴：$y   （其它参数默认）"
+                                binding.tvPackageName.text = packageName
+                                binding.tvActivityName.text = activityName
+                                binding.tvPositionInfo.text = "X轴：$x  Y轴：$y   （其它参数默认）"
                             }
                         }
                         MotionEvent.ACTION_UP -> {
@@ -871,22 +860,22 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         })
 
         // 【添加坐标】
-        dialogBinding.btnAddPosition.setOnClickListener {
-            if (!setPackages.contains(positionDescription.packageName)) {
+        binding.btnAddPosition.setOnClickListener {
+            if (!touchPkgSet.contains(positionDescription.packageName)) {
                 showToastHandler("不建议添加此坐标，该应用为系统程序或白名单程序")
                 return@setOnClickListener
             }
 
-            mapPackagePositions[positionDescription.packageName] = PackagePositionDescription(positionDescription)
-            dialogBinding.btnAddPosition.isEnabled = false
-            dialogBinding.tvPackageName.text = "${positionDescription.packageName} (以下坐标数据已保存)"
+            pkgPosMap[positionDescription.packageName] = PackagePositionDescription(positionDescription)
+            binding.btnAddPosition.isEnabled = false
+            binding.tvPackageName.text = "${positionDescription.packageName} (以下坐标数据已保存)"
 
             // 更新设置，记录用户选中的坐标
-            settings.mapPackagePositions = mapPackagePositions
+            Settings.pkgPosMap = pkgPosMap
         }
 
         // 【获取窗口】，获取当前页面下所有空间的信息，并复制到手机的剪贴板中
-        dialogBinding.btnDumpScreen.setOnClickListener {
+        binding.btnDumpScreen.setOnClickListener {
             val root = service.rootInActiveWindow
 
             // 获取 root 下所有控件的信息
@@ -901,8 +890,8 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         }
 
         // 【退出】,关闭当前弹窗
-        dialogBinding.btnQuit.setOnClickListener {
-            dialogBinding.apply {
+        binding.btnQuit.setOnClickListener {
+            binding.apply {
                 btnShowOutline.text = "显示布局"
                 btnAddWidget.isEnabled = false
                 btnShowTarget.text = "显示准心"
@@ -923,12 +912,12 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         skipAdByActivityPosition = true
         skipAdByActivityWidget = true
         skipAdByKeyword = true
-        setTargetedWidgets = null
+        targetedWidgetSet = null
         clickedWidgets.clear()
 
         // 移除当前的存在的移除事件，添加一个新的延时事件
         mainHandler.removeMessages(FastTouchService.ACTION_STOP_TASK)
-        mainHandler.sendEmptyMessageDelayed(FastTouchService.ACTION_STOP_TASK, settings.skipAdDuration * 1000L)
+        mainHandler.sendEmptyMessageDelayed(FastTouchService.ACTION_STOP_TASK, Settings.skipAdDuration * 1000L)
 
     }
 
@@ -948,7 +937,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         skipAdByActivityPosition = false
         skipAdByActivityWidget = false
         skipAdByKeyword = false
-        setTargetedWidgets = null
+        targetedWidgetSet = null
     }
 
     /**
@@ -959,7 +948,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
     }
 
     private fun showToastHandler(msg: String) {
-        if (settings.showSkipAdToastFlag) {
+        if (Settings.showSkipAdToastFlag) {
             mainHandler.post{
                 Toast.makeText(service, msg, Toast.LENGTH_SHORT).show()
             }

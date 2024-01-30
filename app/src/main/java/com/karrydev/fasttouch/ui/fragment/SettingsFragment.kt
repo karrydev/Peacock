@@ -1,11 +1,10 @@
-package com.karrydev.fasttouch.fragment
+package com.karrydev.fasttouch.ui.fragment
 
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.Button
 import android.widget.ListView
@@ -16,30 +15,34 @@ import androidx.preference.EditTextPreference
 import androidx.preference.MultiSelectListPreference
 import androidx.preference.Preference
 import androidx.preference.SeekBarPreference
-import com.karrydev.fasttouch.FastTouchService
+import com.karrydev.fasttouch.service.FastTouchService
 import com.karrydev.fasttouch.R
 import com.karrydev.fasttouch.adapter.PackageListAdapter
 import com.karrydev.fasttouch.base.BaseMviPreferenceFragment
 import com.karrydev.fasttouch.model.AppInformation
 import com.karrydev.fasttouch.model.PackagePositionDescription
 import com.karrydev.fasttouch.model.PackageWidgetDescription
+import com.karrydev.fasttouch.util.DLog
+import com.karrydev.fasttouch.util.showToast
 import com.karrydev.fasttouch.vm.*
 import java.util.TreeMap
 
 class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
 
-    private val TAG = "SettingsFragment"
     override val viewModel: SettingsViewModel by viewModels()
     private val mainViewModel: MainViewModel by activityViewModels()
 
-    private lateinit var windowManager: WindowManager
-    private lateinit var packageManager: PackageManager
-    private lateinit var inflater: LayoutInflater
+    private val packageManager = activity?.packageManager
+    private val inflater by lazy { activity?.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater }
     private var widgetsPreference: MultiSelectListPreference? = null
     private var mapPackageWidgets = TreeMap<String, Set<PackageWidgetDescription>>()
     private var positionsPreference: MultiSelectListPreference? = null
     private var mapPackagePositions = TreeMap<String, PackagePositionDescription>()
-    private lateinit var pkgListDialog: AlertDialog
+    private var pkgListDialog: AlertDialog? = null
+
+    companion object {
+        const val TAG = "SettingsFragment"
+    }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.root_preferences, rootKey)
@@ -47,19 +50,6 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
         initObserver()
 
         initPreferences()
-
-        windowManager = activity?.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        packageManager = activity?.packageManager!!
-        inflater = activity?.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-
-        return super.onCreateView(inflater, container, savedInstanceState)
     }
 
     override fun onResume() {
@@ -114,7 +104,8 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
             text = viewModel.settings.keywordList.joinToString(" ")
 
             setOnPreferenceChangeListener { _, newValue ->
-                viewModel.dispatchIntent(SettingsIntent.OnKeywordsChangeIntent(newValue.toString()))
+                val value = (newValue as String).split(" ").filter { it.isNotEmpty() }.joinToString(" ")
+                viewModel.dispatchIntent(SettingsIntent.OnKeywordsChangeIntent(value))
                 true
             }
         }
@@ -124,7 +115,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
         whiteList?.apply {
             setOnPreferenceClickListener {
                 // 打开应用列表弹窗
-                pkgListDialog.show()
+                pkgListDialog?.show()
                 true
             }
         }
@@ -156,7 +147,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
 
         // 管理已添加按钮的程序
         widgetsPreference = findPreference("setting_activity_widgets")
-        mapPackageWidgets = viewModel.settings.mapPackageWidgets
+        mapPackageWidgets = viewModel.settings.pkgWidgetMap
         updateSelectListEntries(widgetsPreference, mapPackageWidgets.keys)
         widgetsPreference?.setOnPreferenceChangeListener { _, newValue ->
             // 将 mapPackageWidgets 和 newValue 做对比，删除掉 mapPackageWidgets 内多余的元素
@@ -167,7 +158,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
                     mapPackageWidgets.remove(key)
                 }
             }
-            viewModel.settings.mapPackageWidgets = mapPackageWidgets
+            viewModel.settings.pkgWidgetMap = mapPackageWidgets
 
             // 更新 Preference 的列表数据
             updateSelectListEntries(widgetsPreference, mapPackageWidgets.keys)
@@ -180,7 +171,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
 
         // 管理已添加坐标的程序
         positionsPreference = findPreference("setting_activity_positions")
-        mapPackagePositions = viewModel.settings.mapPackagePositions
+        mapPackagePositions = viewModel.settings.pkgPosMap
         updateSelectListEntries(positionsPreference, mapPackagePositions.keys)
         positionsPreference?.setOnPreferenceChangeListener { _, newValue ->
             // 将 mapPackagePositions 和 newValue 做对比，删除掉 mapPackageWidgets 内多余的元素
@@ -191,9 +182,9 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
                     mapPackagePositions.remove(key)
                 }
             }
-            viewModel.settings.mapPackagePositions = mapPackagePositions
+            viewModel.settings.pkgPosMap = mapPackagePositions
 
-            Log.d(TAG, "size:${viewModel.settings.mapPackagePositions.size}==s:${mapPackagePositions.size}")
+            DLog.d(TAG, "size:${viewModel.settings.pkgPosMap.size}==s:${mapPackagePositions.size}")
             // 更新 Preference 的列表数据
             updateSelectListEntries(positionsPreference, mapPackagePositions.keys)
 
@@ -208,10 +199,11 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
      * 初始化 pkgListDialog
      */
     private fun initPkgListDialog() {
+        val manager = packageManager ?: return
         // 先找到所有的包
         val pkgNameList = ArrayList<String>()
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val resolverInfoList = packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
+        val resolverInfoList = manager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
         resolverInfoList.forEach { info ->
             if (info.activityInfo.packageName != "com.karrydev.fasttouch") { // 排除这个包
                 pkgNameList.add(info.activityInfo.packageName)
@@ -220,12 +212,13 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
 
         // 包装每一个非白名单 pkg，用作列表数据
         val appInfoList = ArrayList<AppInformation>()
-        val whiteList = viewModel.settings.whiteList
+        val whiteList = viewModel.settings.whiteListSet
         pkgNameList.forEach { pkgName ->
-            val info = packageManager.getApplicationInfo(pkgName, PackageManager.GET_META_DATA)
-            val appInfo = AppInformation(pkgName, packageManager.getApplicationLabel(info).toString(), packageManager.getApplicationIcon(info))
-            appInfo.checkFlag = whiteList.contains(pkgName)
-            appInfoList.add(appInfo)
+            val info = manager.getApplicationInfo(pkgName, PackageManager.GET_META_DATA)
+            val appInfo = AppInformation(pkgName, manager.getApplicationLabel(info).toString(), manager.getApplicationIcon(info))
+            appInfoList.add(appInfo.copy(
+                checkFlag = whiteList.contains(pkgName)
+            ))
         }
         appInfoList.sort()
 
@@ -239,13 +232,17 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
         listView.setOnItemClickListener { _, view, position, _ ->
             val checkBox = (view.tag as PackageListAdapter.ViewHolder).checkBox
             val appInfo = appInfoList[position]
-            appInfo.checkFlag = !appInfo.checkFlag
-            checkBox.isChecked = appInfo.checkFlag
+            val info = appInfo.copy(
+                checkFlag = !appInfo.checkFlag
+            )
+            appInfoList[position] = info
+            checkBox.isChecked = info.checkFlag
         }
 
-        pkgListDialog = AlertDialog.Builder(context)
+        val pkgListDialog = AlertDialog.Builder(context)
             .setView(appListDialogLayout)
             .create()
+        this.pkgListDialog = pkgListDialog
 
         val btnCancel = appListDialogLayout.findViewById<Button>(R.id.button_cancel)
         btnCancel?.setOnClickListener {
@@ -260,7 +257,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
                     list.add(info.packageName)
                 }
             }
-            viewModel.settings.whiteList = list
+            viewModel.settings.whiteListSet = list
 
             // 通知 Service 更新白名单
             viewModel.dispatchServiceAction(FastTouchService.ACTION_REFRESH_PACKAGE)
@@ -293,10 +290,10 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
             mainViewModel.handleUserIntent(MainUiIntent.ToPermissionIntent())
         } else {
             // 进行 onResume 操作
-            mapPackageWidgets = viewModel.settings.mapPackageWidgets
+            mapPackageWidgets = viewModel.settings.pkgWidgetMap
             updateSelectListEntries(widgetsPreference, mapPackageWidgets.keys)
 
-            mapPackagePositions = viewModel.settings.mapPackagePositions
+            mapPackagePositions = viewModel.settings.pkgPosMap
             updateSelectListEntries(positionsPreference, mapPackagePositions.keys)
 
             initPkgListDialog()

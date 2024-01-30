@@ -1,9 +1,8 @@
-package com.karrydev.fasttouch.fragment
+package com.karrydev.fasttouch.ui.fragment
 
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,8 +12,8 @@ import android.widget.EditText
 import androidx.fragment.app.DialogFragment
 import com.google.gson.Gson
 import com.karrydev.fasttouch.R
-import com.karrydev.fasttouch.base.Utils
 import com.karrydev.fasttouch.model.Settings
+import com.karrydev.fasttouch.util.showToast
 
 class ManagePackageWidgetsDialogFragment : DialogFragment() {
 
@@ -31,7 +30,7 @@ class ManagePackageWidgetsDialogFragment : DialogFragment() {
 
         editRules = view.findViewById(R.id.editText_rules)
         setting = Settings
-        originalRules = Gson().toJson(setting.mapPackageWidgets)
+        originalRules = Gson().toJson(setting.pkgWidgetMap)
         editRules.setText(originalRules)
 
         // 【重置规则】
@@ -45,7 +44,7 @@ class ManagePackageWidgetsDialogFragment : DialogFragment() {
             val clipboard = requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("Rules: Widget in Packages", editRules.text.toString())
             clipboard.setPrimaryClip(clip)
-            Utils.showToast("规则已复制到剪贴板!")
+            showToast("规则已复制到剪贴板!")
         }
 
         // 【粘贴规则】
@@ -56,16 +55,16 @@ class ManagePackageWidgetsDialogFragment : DialogFragment() {
             if (clipData != null && clipData.itemCount > 0) {
                 val pasteData: String = clipData.getItemAt(0).text.toString()
                 editRules.setText(pasteData)
-                Utils.showToast("已从剪贴板获取规则!")
+                showToast("已从剪贴板获取规则!")
             } else {
-                Utils.showToast("未从剪贴板发现规则!")
+                showToast("未从剪贴板发现规则!")
             }
         }
 
         // 【取消修改】
         val btCancel = view.findViewById<Button>(R.id.button_widgets_cancel)
         btCancel?.setOnClickListener {
-            Utils.showToast("修改已取消")
+            showToast("修改已取消")
             dialog!!.dismiss()
         }
 
@@ -83,10 +82,10 @@ class ManagePackageWidgetsDialogFragment : DialogFragment() {
         btConfirm?.setOnClickListener {
             val result: Boolean = setting.setPackageWidgetsInString(editRules.text.toString())
             if (result) {
-                Utils.showToast("规则已保存!")
+                showToast("规则已保存!")
                 dialog!!.dismiss()
             } else {
-                Utils.showToast("规则有误，请修改后再次保存!")
+                showToast("规则有误，请修改后再次保存!")
             }
         }
         return view

@@ -1,4 +1,4 @@
-package com.karrydev.fasttouch
+package com.karrydev.fasttouch.service
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
@@ -7,8 +7,9 @@ import java.lang.ref.WeakReference
 
 class FastTouchService : AccessibilityService() {
 
-    companion object {
+    private var serviceImpl: FastTouchServiceImpl? = null
 
+    companion object {
         const val ACTION_REFRESH_KEYWORDS = 1
         const val ACTION_REFRESH_PACKAGE = 2
         const val ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS = 3
@@ -20,7 +21,7 @@ class FastTouchService : AccessibilityService() {
         private var serviceInstance: WeakReference<FastTouchService>? = null
 
         fun isServiceRunning(): Boolean {
-            return serviceInstance?.get() != null && serviceInstance?.get()!!.serviceImpl != null
+            return serviceInstance?.get()?.serviceImpl != null
         }
 
         /**
@@ -28,15 +29,11 @@ class FastTouchService : AccessibilityService() {
          */
         fun dispatchReceiverAction(action: Int): Boolean {
             val service = serviceInstance?.get()
-            if (service?.serviceImpl == null) {
-                return false
-            }
-            service.serviceImpl!!.mainHandler.sendEmptyMessage(action)
+            val impl = service?.serviceImpl ?: return false
+            impl.mainHandler.sendEmptyMessage(action)
             return true
         }
     }
-
-    private var serviceImpl: FastTouchServiceImpl? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()

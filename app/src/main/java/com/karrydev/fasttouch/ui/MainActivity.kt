@@ -1,12 +1,14 @@
-package com.karrydev.fasttouch
+package com.karrydev.fasttouch.ui
 
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.databinding.DataBindingUtil
+import com.karrydev.fasttouch.R
 import com.karrydev.fasttouch.base.BaseMviActivity
 import com.karrydev.fasttouch.databinding.MainActivityBinding
-import com.karrydev.fasttouch.fragment.PermissionFragment
-import com.karrydev.fasttouch.fragment.SettingsFragment
+import com.karrydev.fasttouch.ui.fragment.PermissionFragment
+import com.karrydev.fasttouch.ui.fragment.SettingsFragment
+import com.karrydev.fasttouch.util.showToast
 import com.karrydev.fasttouch.vm.MainUiIntent
 import com.karrydev.fasttouch.vm.MainUiState
 import com.karrydev.fasttouch.vm.MainViewModel
