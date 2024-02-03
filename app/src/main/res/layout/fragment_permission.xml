@@ -21,6 +21,43 @@
             android:textSize="18sp" />
 
         <androidx.cardview.widget.CardView
+            android:id="@+id/card_notification"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="16dp">
+
+            <LinearLayout
+                android:id="@+id/ll_notification_permission"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/no_access_permission"
+                android:paddingHorizontal="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/text_notification_permission"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/text_notification_permission"
+                    android:textSize="16sp" />
+
+                <ImageButton
+                    android:id="@+id/button_notification_permission"
+                    style="@style/Widget.AppCompat.Button.Small"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="8dp"
+                    android:src="@drawable/ic_configuration"
+                    android:text="@string/button_setting" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"

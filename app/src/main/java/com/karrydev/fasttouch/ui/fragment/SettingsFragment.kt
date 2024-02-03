@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.*
 import android.widget.Button
@@ -22,6 +23,7 @@ import com.karrydev.fasttouch.base.BaseMviPreferenceFragment
 import com.karrydev.fasttouch.model.AppInformation
 import com.karrydev.fasttouch.model.PackagePositionDescription
 import com.karrydev.fasttouch.model.PackageWidgetDescription
+import com.karrydev.fasttouch.service.ForegroundService
 import com.karrydev.fasttouch.util.DLog
 import com.karrydev.fasttouch.util.showToast
 import com.karrydev.fasttouch.vm.*
@@ -35,9 +37,9 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
     private val packageManager = activity?.packageManager
     private val inflater by lazy { activity?.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater }
     private var widgetsPreference: MultiSelectListPreference? = null
-    private var mapPackageWidgets = TreeMap<String, Set<PackageWidgetDescription>>()
+    private var pkgWidgetMap = TreeMap<String, Set<PackageWidgetDescription>>()
     private var positionsPreference: MultiSelectListPreference? = null
-    private var mapPackagePositions = TreeMap<String, PackagePositionDescription>()
+    private var pkgPosMap = TreeMap<String, PackagePositionDescription>()
     private var pkgListDialog: AlertDialog? = null
 
     companion object {
@@ -147,21 +149,21 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
 
         // 管理已添加按钮的程序
         widgetsPreference = findPreference("setting_activity_widgets")
-        mapPackageWidgets = viewModel.settings.pkgWidgetMap
-        updateSelectListEntries(widgetsPreference, mapPackageWidgets.keys)
+        pkgWidgetMap = viewModel.settings.pkgWidgetMap
+        updateSelectListEntries(widgetsPreference, pkgWidgetMap.keys)
         widgetsPreference?.setOnPreferenceChangeListener { _, newValue ->
             // 将 mapPackageWidgets 和 newValue 做对比，删除掉 mapPackageWidgets 内多余的元素
             // 因为添加入口不在这里，所以只需要处理 删除 这一种情况
-            val keys = HashSet(mapPackageWidgets.keys)
+            val keys = HashSet(pkgWidgetMap.keys)
             keys.forEach { key ->
                 if (!(newValue as HashSet<*>).contains(key)) {
-                    mapPackageWidgets.remove(key)
+                    pkgWidgetMap.remove(key)
                 }
             }
-            viewModel.settings.pkgWidgetMap = mapPackageWidgets
+            viewModel.settings.pkgWidgetMap = pkgWidgetMap
 
             // 更新 Preference 的列表数据
-            updateSelectListEntries(widgetsPreference, mapPackageWidgets.keys)
+            updateSelectListEntries(widgetsPreference, pkgWidgetMap.keys)
 
             // 发送消息通知 Service 更新 Widget 数据
             viewModel.dispatchServiceAction(FastTouchService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS)
@@ -171,22 +173,22 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
 
         // 管理已添加坐标的程序
         positionsPreference = findPreference("setting_activity_positions")
-        mapPackagePositions = viewModel.settings.pkgPosMap
-        updateSelectListEntries(positionsPreference, mapPackagePositions.keys)
+        pkgPosMap = viewModel.settings.pkgPosMap
+        updateSelectListEntries(positionsPreference, pkgPosMap.keys)
         positionsPreference?.setOnPreferenceChangeListener { _, newValue ->
             // 将 mapPackagePositions 和 newValue 做对比，删除掉 mapPackageWidgets 内多余的元素
             // 因为添加入口不在这里，所以只需要处理 删除 这一种情况，处理方法和【管理已添加按钮的程序】一样
-            val keys = HashSet(mapPackagePositions.keys)
+            val keys = HashSet(pkgPosMap.keys)
             keys.forEach { key ->
                 if (!(newValue as HashSet<*>).contains(key)) {
-                    mapPackagePositions.remove(key)
+                    pkgPosMap.remove(key)
                 }
             }
-            viewModel.settings.pkgPosMap = mapPackagePositions
+            viewModel.settings.pkgPosMap = pkgPosMap
 
-            DLog.d(TAG, "size:${viewModel.settings.pkgPosMap.size}==s:${mapPackagePositions.size}")
+            DLog.d(TAG, "size:${viewModel.settings.pkgPosMap.size}==s:${pkgPosMap.size}")
             // 更新 Preference 的列表数据
-            updateSelectListEntries(positionsPreference, mapPackagePositions.keys)
+            updateSelectListEntries(positionsPreference, pkgPosMap.keys)
 
             // 发送消息通知 Service 更新 Widget 数据
             viewModel.dispatchServiceAction(FastTouchService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS)
@@ -285,18 +287,26 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
      * 检查权限，onResume 中要执行的初始化任务也放在这里
      */
     private fun checkPermission(state: MainUiState.CheckPermissionState) {
-        if (!state.accessibility || !state.powerIgnored) {
+        if (!state.notification || !state.accessibility || !state.powerIgnored) {
             // 缺少相应权限，回到PermissionFragment
             mainViewModel.handleUserIntent(MainUiIntent.ToPermissionIntent())
         } else {
             // 进行 onResume 操作
-            mapPackageWidgets = viewModel.settings.pkgWidgetMap
-            updateSelectListEntries(widgetsPreference, mapPackageWidgets.keys)
+            pkgWidgetMap = viewModel.settings.pkgWidgetMap
+            updateSelectListEntries(widgetsPreference, pkgWidgetMap.keys)
 
-            mapPackagePositions = viewModel.settings.pkgPosMap
-            updateSelectListEntries(positionsPreference, mapPackagePositions.keys)
+            pkgPosMap = viewModel.settings.pkgPosMap
+            updateSelectListEntries(positionsPreference, pkgPosMap.keys)
 
             initPkgListDialog()
+
+            // 开启前台服务
+            val serviceIntent = Intent(activity, ForegroundService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                activity?.startForegroundService(serviceIntent)
+            } else {
+                activity?.startService(serviceIntent)
+            }
         }
     }
 }

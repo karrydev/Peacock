@@ -1,7 +1,11 @@
 package com.karrydev.fasttouch.vm
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.PowerManager
+import androidx.core.content.ContextCompat
 import com.karrydev.fasttouch.service.FastTouchService
 import com.karrydev.fasttouch.base.BaseMviViewModel
 import com.karrydev.fasttouch.base.IUiIntent
@@ -24,7 +28,14 @@ class MainViewModel : BaseMviViewModel() {
      * 检查权限（无障碍、电池优化）
      */
     private fun checkPermission() {
-        // 检查是否开启
+        // 检查通知权限是否开启
+        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(appContext, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+
+        // 检查是否开启无障碍服务
         val accessibility = FastTouchService.isServiceRunning()
 
         // 检查电池优化权限是否开启
@@ -32,8 +43,8 @@ class MainViewModel : BaseMviViewModel() {
         val hasIgnored = pm.isIgnoringBatteryOptimizations(appContext.packageName)
 
         // 更新state
-        sendUiState { MainUiState.CheckPermissionState(accessibility, hasIgnored) }
-        checkPermission = accessibility && hasIgnored
+        sendUiState { MainUiState.CheckPermissionState(notification, accessibility, hasIgnored) }
+        checkPermission = notification && accessibility && hasIgnored
     }
 
     /**
@@ -50,7 +61,7 @@ class MainViewModel : BaseMviViewModel() {
 
 sealed class MainUiState {
 
-    class CheckPermissionState(val accessibility: Boolean, val powerIgnored: Boolean) : IUiState // 检查结果（无障碍、电池优化）
+    class CheckPermissionState(val notification: Boolean, val accessibility: Boolean, val powerIgnored: Boolean) : IUiState // 检查结果（无障碍、电池优化）
 
     class ToSettingsFragmentState(val permissionDone: Boolean) : IUiState // 完成权限获取，切换SettingsFragment
 

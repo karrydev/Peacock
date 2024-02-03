@@ -50,10 +50,13 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
 
     @Volatile
     private var skipAdTaskRunning = false
+
     @Volatile
     private var skipAdByActivityPosition = false
+
     @Volatile
     private var skipAdByActivityWidget = false
+
     @Volatile
     private var skipAdByKeyword = false
 
@@ -62,14 +65,17 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
      */
     private var packageName = service.packageName
     private var packageManager = service.packageManager
+
     /**
      * 所有需要跳过的包集合
      */
     private val touchPkgSet = HashSet<String>()
+
     /**
      * 输入法App集合
      */
     private val imeAppSet = HashSet<String>()
+
     /**
      * 白名单集合
      */
@@ -108,7 +114,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
 
         // 初始化主线程 Handler 和 Receiver
         initReceiverAndHandler()
-        
+
         // 初始化用户自定义添加弹窗相关
         initCustomizationDialog()
     }
@@ -135,29 +141,35 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                 keywordList.clear()
                 keywordList.addAll(Settings.keywordList)
             }
+
             FastTouchService.ACTION_REFRESH_PACKAGE -> { // 更新 package 列表
                 // 这里可能是用户设置【白名单】发生了变化，也可能是有【新应用安装】或发生【应用卸载】
                 whiteListSet.clear()
                 whiteListSet.addAll(Settings.whiteListSet)
                 findAllPackages()
             }
+
             FastTouchService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS -> { // 更新用户自定义跳过的内容
                 pkgPosMap.clear()
                 pkgWidgetMap.clear()
                 pkgPosMap.putAll(Settings.pkgPosMap)
                 pkgWidgetMap.putAll(Settings.pkgWidgetMap)
             }
+
             FastTouchService.ACTION_STOP_SERVICE -> { // 关闭无障碍服务
                 service.disableSelf()
             }
+
             FastTouchService.ACTION_SHOW_CUSTOMIZATION_DIALOG -> { // 打开用户自定义跳过方法弹窗
                 if (!customizationDialogShowing) {
                     showCustomizationDialog()
                 }
             }
+
             FastTouchService.ACTION_START_TASK -> { // 开启 skip-ad 任务
                 startSkipAdTask()
             }
+
             FastTouchService.ACTION_STOP_TASK -> { // 结束 skip-ad 任务
                 stopSkipAdTaskInner()
             }
@@ -238,7 +250,6 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                         // 开启一个新任务
                         if (touchPkgSet.contains(packageName)) {
                             // 只有在白名单内的应用才会启动
-                            // 这里是唯一一处启动任务的地方
                             startSkipAdTask()
                         }
                     } else {
@@ -293,9 +304,9 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
 
                         // 仅点击一次 TODO 验证是否有问题
                         if (curActName == packagePositionDescription.activityName) {
-                            DLog.d(TAG, "正在根据位置跳过广告...")
+                            DLog.d(TAG, "正在根据位置跳过广告 position(${packagePositionDescription.x}, ${packagePositionDescription.y}")
                             showToastHandler("正在根据位置跳过广告...")
-                            simulatedClick(packagePositionDescription.x, packagePositionDescription.y , 0, 40)
+                            simulatedClick(packagePositionDescription.x, packagePositionDescription.y, 0, 40)
                         }
                     }
                 }
@@ -319,6 +330,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                 val node = service.rootInActiveWindow
                 threadService.execute { iterateNodesToSkipAd(node) }
             }
+
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
                 DLog.d(TAG, "window content changed $packageName")
                 // 若跳过任务未启动则不响应该事件
@@ -339,6 +351,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                     }
                 }
             }
+
             else -> {}
         }
     }
@@ -358,8 +371,8 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         val nodeQueue: Deque<AccessibilityNodeInfo> = LinkedList()
         nodeQueue.offer(root)
 
-        var node : AccessibilityNodeInfo
-        var skipFlag : Boolean
+        var node: AccessibilityNodeInfo
+        var skipFlag: Boolean
         // 通过广度优先遍历的方式进行 ViewTree 的遍历
         while (nodeQueue.isNotEmpty() && skipAdTaskRunning) {
             node = nodeQueue.pop()
@@ -392,7 +405,8 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         keywordList.forEach { keyword ->
             // text 或者 description 包含 keyword，且不能太长（这里设置了 keyword.length+6 为了避免原本是一段正常的文字包含了 keyword 的情况）
             if (text != null && text.contains(keyword) && !text.contains(selfPkgName) && (text.length <= keyword.length + 6) ||
-                description != null && description.contains(keyword) && !description.contains(selfPkgName) && (description.length <= keyword.length + 6)) {
+                description != null && description.contains(keyword) && !description.contains(selfPkgName) && (description.length <= keyword.length + 6)
+            ) {
                 isFound = true
             }
             if (isFound) {
@@ -407,7 +421,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                 // 避免重复点击
                 clickedWidgets.add(nodeDesc)
 
-                DLog.d(TAG, "正在根据关键字跳过广告...")
+                DLog.d(TAG, "正在根据关键字跳过广告 desc=$nodeDesc")
                 showToastHandler("正在根据关键字跳过广告...")
 
                 val clicked = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -450,9 +464,9 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
             // 判断当前 node 是否在用户指定的控件集合内
             val isFound =
                 rect == pwd.rect ||
-                id != null && pwd.idName.isNotEmpty() && id.contains(pwd.idName) ||
-                text != null && pwd.text.isNotEmpty() && text.contains(pwd.text) ||
-                description != null && pwd.description.isNotEmpty() && description.contains(pwd.description)
+                        id != null && pwd.idName.isNotEmpty() && id.contains(pwd.idName) ||
+                        text != null && pwd.text.isNotEmpty() && text.contains(pwd.text) ||
+                        description != null && pwd.description.isNotEmpty() && description.contains(pwd.description)
 
             if (isFound) {
                 // 找到了用户指定的控件
@@ -462,11 +476,11 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                     // 避免重复点击
                     clickedWidgets.add(nodeDesc)
 
-                    DLog.d(TAG, "正在根据控件跳过广告...")
+                    DLog.d(TAG, "正在根据控件跳过广告 desc=$nodeDesc")
                     showToastHandler("正在根据控件跳过广告...")
 
                     if (pwd.onlyClick) {
-                        simulatedClick(rect.centerX(), rect.centerY(), 0 ,20)
+                        simulatedClick(rect.centerX(), rect.centerY(), 0, 20)
                     } else {
                         if (!node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                             if (!node.parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
@@ -654,8 +668,8 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         windowManager.addView(imgPositionTarget, positionTargetParams)
 
         // 实现弹窗的拖动，这里可能可以忽略X轴
-        customizationDialogView?.setOnTouchListener(object: View.OnTouchListener {
-//            var x = 0
+        customizationDialogView?.setOnTouchListener(object : View.OnTouchListener {
+            //            var x = 0
             var y = 0
 
             override fun onTouch(v: View?, event: MotionEvent?): Boolean {
@@ -665,6 +679,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
 //                            x = event.rawX.roundToInt()
                             y = event.rawY.roundToInt()
                         }
+
                         MotionEvent.ACTION_MOVE -> {
 //                            dialogParams.x = (dialogParams.x + event.rawX - x).roundToInt()
                             dialogParams.y = (dialogParams.y + event.rawY - y).roundToInt()
@@ -733,7 +748,8 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                                         tvPackageName.text = packageName
                                         tvActivityName.text = activityName
                                         val idStr = if (idName.indexOf("id/") + 3 < idName.length) idName.substring(idName.indexOf("id/") + 3) else ""
-                                        tvWidgetInfo.text = "click:${node.isClickable}  bonus:${rect.toShortString()}\nid:$idStr  desc:$description  text:$text"
+                                        tvWidgetInfo.text =
+                                            "click:${node.isClickable}  bonus:${rect.toShortString()}\nid:$idStr  desc:$description  text:$text"
                                     }
                                 }
                                 // 添加选中背景色
@@ -815,7 +831,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         }
 
         // 实现准心图片的拖动
-        imgPositionTarget.setOnTouchListener(object: View.OnTouchListener {
+        imgPositionTarget.setOnTouchListener(object : View.OnTouchListener {
             var x = 0
             var y = 0
             var targetWidth = positionTargetParams.width / 2
@@ -832,6 +848,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                             x = event.rawX.roundToInt()
                             y = event.rawY.roundToInt()
                         }
+
                         MotionEvent.ACTION_MOVE -> {
                             positionTargetParams.x = (positionTargetParams.x + event.rawX - x).roundToInt()
                             positionTargetParams.y = (positionTargetParams.y + event.rawY - y).roundToInt()
@@ -849,6 +866,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
                                 binding.tvPositionInfo.text = "X轴：$x  Y轴：$y   （其它参数默认）"
                             }
                         }
+
                         MotionEvent.ACTION_UP -> {
                             positionTargetParams.alpha = 0.5f
                             windowManager.updateViewLayout(imgPositionTarget, positionTargetParams)
@@ -908,6 +926,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
      * 开启任务
      */
     private fun startSkipAdTask() {
+        DLog.d(TAG, "start AD Task")
         skipAdTaskRunning = true
         skipAdByActivityPosition = true
         skipAdByActivityWidget = true
@@ -918,7 +937,6 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
         // 移除当前的存在的移除事件，添加一个新的延时事件
         mainHandler.removeMessages(FastTouchService.ACTION_STOP_TASK)
         mainHandler.sendEmptyMessageDelayed(FastTouchService.ACTION_STOP_TASK, Settings.skipAdDuration * 1000L)
-
     }
 
     /**
@@ -933,6 +951,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
      * 不再接受新的任务，但不影响当前已有的任务
      */
     private fun stopSkipAdTaskInner() {
+        DLog.d(TAG, "stop AD Task")
         skipAdTaskRunning = false
         skipAdByActivityPosition = false
         skipAdByActivityWidget = false
@@ -949,7 +968,7 @@ class FastTouchServiceImpl(private val service: AccessibilityService) {
 
     private fun showToastHandler(msg: String) {
         if (Settings.showSkipAdToastFlag) {
-            mainHandler.post{
+            mainHandler.post {
                 Toast.makeText(service, msg, Toast.LENGTH_SHORT).show()
             }
         }

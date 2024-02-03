@@ -47,7 +47,7 @@ object Settings {
      * 关键词列表
      */
     private const val KEYWORDS_LIST = "KEYWORDS_LIST"
-    var keywordList = ArrayList<String>()
+    var keywordList = mutableListOf<String>()
         set(value) {
             field.clear()
             field.addAll(value)
@@ -121,7 +121,8 @@ object Settings {
         skipAdDuration = sp.getInt(SKIP_AD_DURATION, 4)
 
         // 初始化关键字列表
-        var json = sp.getString(KEYWORDS_LIST, "[\"跳过\",\"关闭\"]")
+        // 这里谨慎设置「关闭」，因为很多正常弹窗的关闭icon的desc都是「关闭」，容易导致误关
+        var json = sp.getString(KEYWORDS_LIST, "[\"跳过\"]")
         if (json != null) {
             keywordList.addAll(gson.fromJson(json, ArrayList<String>().javaClass))
         }

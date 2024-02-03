@@ -5,6 +5,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import com.karrydev.fasttouch.BuildConfig
 import com.karrydev.fasttouch.FastTouchApp
+import com.karrydev.fasttouch.R
 
 /**
  * 顶层对象和函数集合
@@ -14,6 +15,8 @@ import com.karrydev.fasttouch.FastTouchApp
  * appContext
  */
 val appContext = FastTouchApp.context
+
+val appName = appContext.getString(R.string.app_name)
 
 fun showToast(msg: String, duration: Int = Toast.LENGTH_SHORT) {
     Toast.makeText(appContext, msg, duration).show()

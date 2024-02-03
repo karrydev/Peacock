@@ -18,6 +18,10 @@ class MainActivity : BaseMviActivity<MainViewModel, MainActivityBinding>() {
     override val viewModel: MainViewModel by viewModels()
     private var initFragmentFlag = false
 
+    companion object {
+        const val TAG = "MainActivity"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main_activity)

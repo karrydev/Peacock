@@ -18,7 +18,7 @@ class SettingsViewModel : BaseMviViewModel() {
     }
 
     private fun onKeywordsChange(newValue: String) {
-        settings.keywordList = newValue.split(" ").toList() as ArrayList<String>
+        settings.keywordList = newValue.split(" ").toList().toMutableList()
 
         FastTouchService.dispatchReceiverAction(FastTouchService.ACTION_REFRESH_KEYWORDS)
 
