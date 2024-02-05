@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.view.*
 import android.widget.Button
@@ -23,7 +22,6 @@ import com.karrydev.fasttouch.base.BaseMviPreferenceFragment
 import com.karrydev.fasttouch.model.AppInformation
 import com.karrydev.fasttouch.model.PackagePositionDescription
 import com.karrydev.fasttouch.model.PackageWidgetDescription
-import com.karrydev.fasttouch.service.ForegroundService
 import com.karrydev.fasttouch.util.DLog
 import com.karrydev.fasttouch.util.showToast
 import com.karrydev.fasttouch.vm.*
@@ -299,14 +297,6 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
             updateSelectListEntries(positionsPreference, pkgPosMap.keys)
 
             initPkgListDialog()
-
-            // 开启前台服务
-            val serviceIntent = Intent(activity, ForegroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                activity?.startForegroundService(serviceIntent)
-            } else {
-                activity?.startService(serviceIntent)
-            }
         }
     }
 }
