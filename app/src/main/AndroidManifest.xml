@@ -18,7 +18,7 @@
     </queries>
 
     <application
-        android:name=".FastTouchApp"
+        android:name=".PeacockApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -29,7 +29,7 @@
         tools:targetApi="31">
 
         <service
-            android:name=".service.FastTouchService"
+            android:name=".service.PeacockService"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">

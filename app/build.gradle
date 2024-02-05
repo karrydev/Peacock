@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.karrydev.fasttouch'
+    namespace 'com.karrydev.peacock'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.karrydev.fasttouch"
+        applicationId "com.karrydev.peacock"
         minSdk 24
         targetSdk 33
         versionCode 1

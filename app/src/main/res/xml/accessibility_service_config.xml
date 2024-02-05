@@ -5,6 +5,6 @@
     android:accessibilityFlags="flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews"
     android:canPerformGestures="true"
     android:canRetrieveWindowContent="true"
-    android:description="@string/fast_touch_service_description"
+    android:description="@string/peacock_service_description"
     android:notificationTimeout="50"
-    android:settingsActivity="com.karrydev.fasttouch.MainActivity" />
+    android:settingsActivity="com.karrydev.peacock.MainActivity" />
