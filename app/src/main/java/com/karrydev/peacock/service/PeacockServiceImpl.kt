@@ -44,7 +44,7 @@ import kotlin.math.roundToInt
 
 class PeacockServiceImpl(private val service: AccessibilityService) {
 
-    private val selfPkgName = "孔雀"
+    private val selfPkgName = "Peacock"
     private var curPkgName = ""
     private var curActName = ""
 
@@ -531,7 +531,7 @@ class PeacockServiceImpl(private val service: AccessibilityService) {
         tempSet.add(packageName)
         tempSet.add("com.android.settings")
 
-        // 移除掉所有白名单应用、系统应用、桌面以及一些特殊的包，最终得到的就是可以进行孔雀的包集合 setPackages
+        // 移除掉所有白名单应用、系统应用、桌面以及一些特殊的包，最终得到的就是可以进行跳过的包集合 setPackages
         touchPkgSet.apply {
             removeAll(whiteListSet)
             removeAll(imeAppSet)

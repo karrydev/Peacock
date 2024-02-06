@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">孔雀</string>
+    <string name="app_name">Peacock</string>
     <!-- Settings Activity Title -->
     <string name="title_activity_settings">SettingsActivity</string>
 
@@ -7,15 +7,15 @@
     <string name="toast_no_access_permission">未获取到无障碍权限或电池优化设置未完成</string>
 
     <!--  PermissionFragment  -->
-    <string name="text_instructions">\"孔雀\"是基于安卓系统的无障碍服务来实现跳过自动广告功能，开源不联网，绝对安全！为保证程序能正常工作，请检查以下设置：</string>
-    <string name="text_notification_permission">0. 在\"通知\"设置里，打开\"孔雀 - 允许发送通知\"。</string>
-    <string name="text_accessibility_permission">1. 在\"无障碍\"设置里，打开\"孔雀 - 无障碍服务\"。</string>
-    <string name="text_power_permission">2. 在\"电池优化\"设置里，设置\"孔雀\"为\"不优化\"。</string>
-    <string name="text_rom_battery">3. 在电池管理里，设置\"孔雀\"为\"允许后台耗电\"。设置方法因品牌不同有所差异，比如VIVO系统为：\"设置\" -> \"电池\" -> \"后台耗电管理\"。</string>
-    <string name="text_task_manager">4. 在\"任务管理\"里，锁定\"孔雀\"。</string>
+    <string name="text_instructions">\"Peacock\"是基于安卓系统的无障碍服务来实现跳过自动广告功能，开源不联网，绝对安全！为保证程序能正常工作，请检查以下设置：</string>
+    <string name="text_notification_permission">0. 在\"通知\"设置里，打开\"Peacock - 允许发送通知\"。</string>
+    <string name="text_accessibility_permission">1. 在\"无障碍\"设置里，打开\"Peacock - 无障碍服务\"。</string>
+    <string name="text_power_permission">2. 在\"电池优化\"设置里，设置\"Peacock\"为\"不优化\"。</string>
+    <string name="text_rom_battery">3. 在电池管理里，设置\"Peacock\"为\"允许后台耗电\"。设置方法因品牌不同有所差异，比如VIVO系统为：\"设置\" -> \"电池\" -> \"后台耗电管理\"。</string>
+    <string name="text_task_manager">4. 在\"任务管理\"里，锁定\"Peacock\"。</string>
     <string name="button_setting">设置</string>
 
     <!--  PeacockService  -->
-    <string name="peacock_service_description">\"孔雀\"是基于安卓系统的无障碍服务来实现自动跳过广告功能的，为了保证程序能正常工作，打开此服务。\n\n本程序为开源程序，不需要网络权限，不会收集或上传任何个人信息，请放心使用！</string>
+    <string name="peacock_service_description">\"Peacock\"是基于安卓系统的无障碍服务来实现自动跳过广告功能的，为了保证程序能正常工作，打开此服务。\n\n本程序为开源程序，不需要网络权限，不会收集或上传任何个人信息，请放心使用！</string>
 
 </resources>

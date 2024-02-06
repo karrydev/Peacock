@@ -125,7 +125,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
         customization?.apply {
             setOnPreferenceClickListener {
                 if (!viewModel.dispatchServiceAction(PeacockService.ACTION_SHOW_CUSTOMIZATION_DIALOG)) {
-                    showToast("孔雀服务未运行，请先打开无障碍服务!")
+                    showToast("Peacock服务未运行，请先打开无障碍服务!")
                     mainViewModel.dispatchIntent(MainUiIntent.CheckPermissionIntent())
                 }
                 
