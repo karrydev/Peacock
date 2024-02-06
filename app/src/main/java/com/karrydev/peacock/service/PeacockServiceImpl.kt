@@ -29,12 +29,12 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.databinding.DataBindingUtil
 import com.karrydev.peacock.R
-import com.karrydev.peacock.receiver.PackageChangeReceiver
-import com.karrydev.peacock.receiver.UserPresentReceiver
 import com.karrydev.peacock.databinding.LayoutCustomizationDialogBinding
 import com.karrydev.peacock.model.PackagePositionDescription
 import com.karrydev.peacock.model.PackageWidgetDescription
 import com.karrydev.peacock.model.Settings
+import com.karrydev.peacock.receiver.PackageChangeReceiver
+import com.karrydev.peacock.receiver.UserPresentReceiver
 import com.karrydev.peacock.util.DLog
 import com.karrydev.peacock.util.describeAccessibilityNode
 import java.util.Deque
@@ -79,10 +79,10 @@ class PeacockServiceImpl(private val service: AccessibilityService) {
     /**
      * 白名单集合
      */
-    private val whiteListSet = Settings.whiteListSet
+    private var whiteListSet = Settings.whiteListSet
     private var pkgPosMap = Settings.pkgPosMap
-    private val pkgWidgetMap = Settings.pkgWidgetMap
-    private val keywordList = Settings.keywordList
+    private var pkgWidgetMap = Settings.pkgWidgetMap
+    private var keywordList = Settings.keywordList
     private val clickedWidgets = HashSet<String>()
 
     @Volatile
@@ -138,22 +138,18 @@ class PeacockServiceImpl(private val service: AccessibilityService) {
     private fun initMainHandler() = Handler(Looper.getMainLooper()) { msg ->
         when (msg.what) {
             PeacockService.ACTION_REFRESH_KEYWORDS -> { // 更新 keywords
-                keywordList.clear()
-                keywordList.addAll(Settings.keywordList)
+                keywordList = Settings.keywordList
             }
 
             PeacockService.ACTION_REFRESH_PACKAGE -> { // 更新 package 列表
                 // 这里可能是用户设置【白名单】发生了变化，也可能是有【新应用安装】或发生【应用卸载】
-                whiteListSet.clear()
-                whiteListSet.addAll(Settings.whiteListSet)
+                whiteListSet = Settings.whiteListSet
                 findAllPackages()
             }
 
             PeacockService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS -> { // 更新用户自定义跳过的内容
-                pkgPosMap.clear()
-                pkgWidgetMap.clear()
-                pkgPosMap.putAll(Settings.pkgPosMap)
-                pkgWidgetMap.putAll(Settings.pkgWidgetMap)
+                pkgPosMap = Settings.pkgPosMap
+                pkgWidgetMap = Settings.pkgWidgetMap
             }
 
             PeacockService.ACTION_STOP_SERVICE -> { // 关闭无障碍服务

@@ -22,6 +22,7 @@ import com.karrydev.peacock.base.BaseMviPreferenceFragment
 import com.karrydev.peacock.model.AppInformation
 import com.karrydev.peacock.model.PackagePositionDescription
 import com.karrydev.peacock.model.PackageWidgetDescription
+import com.karrydev.peacock.model.Settings
 import com.karrydev.peacock.util.DLog
 import com.karrydev.peacock.util.showToast
 import com.karrydev.peacock.vm.*
@@ -67,7 +68,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
         stateFlowHandle(viewModel.uiStateFlow) {
             when (it) {
                 is SettingsState.UpdateKeywordsState -> {
-                    findPreference<EditTextPreference>("setting_keywords")?.text = viewModel.settings.keywordList.joinToString(" ")
+                    findPreference<EditTextPreference>("setting_keywords")?.text = Settings.keywordList.joinToString(" ")
                 }
             }
         }
@@ -77,9 +78,9 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
         // 跳过广告时显示通知
         val showSkipAdToast = findPreference<CheckBoxPreference>("show_skip_ad_toast")
         showSkipAdToast?.apply {
-            isChecked = viewModel.settings.showSkipAdToastFlag
+            isChecked = Settings.showSkipAdToastFlag
             setOnPreferenceChangeListener { _, newValue ->
-                viewModel.settings.showSkipAdToastFlag = newValue as Boolean
+                Settings.showSkipAdToastFlag = newValue as Boolean
                 true
             }
         }
@@ -90,10 +91,10 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
             max = 10
             min = 1
             updatesContinuously = true
-            value = viewModel.settings.skipAdDuration
+            value = Settings.skipAdDuration
 
             setOnPreferenceChangeListener { _, newValue ->
-                viewModel.settings.skipAdDuration = newValue as Int
+                Settings.skipAdDuration = newValue as Int
                 true
             }
         }
@@ -101,7 +102,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
         // 跳过广告按钮的关键字
         val keywords = findPreference<EditTextPreference>("setting_keywords")
         keywords?.apply {
-            text = viewModel.settings.keywordList.joinToString(" ")
+            text = Settings.keywordList.joinToString(" ")
 
             setOnPreferenceChangeListener { _, newValue ->
                 val value = (newValue as String).split(" ").filter { it.isNotEmpty() }.joinToString(" ")
@@ -147,7 +148,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
 
         // 管理已添加按钮的程序
         widgetsPreference = findPreference("setting_activity_widgets")
-        pkgWidgetMap = viewModel.settings.pkgWidgetMap
+        pkgWidgetMap = Settings.pkgWidgetMap
         updateSelectListEntries(widgetsPreference, pkgWidgetMap.keys)
         widgetsPreference?.setOnPreferenceChangeListener { _, newValue ->
             // 将 mapPackageWidgets 和 newValue 做对比，删除掉 mapPackageWidgets 内多余的元素
@@ -158,7 +159,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
                     pkgWidgetMap.remove(key)
                 }
             }
-            viewModel.settings.pkgWidgetMap = pkgWidgetMap
+            Settings.pkgWidgetMap = pkgWidgetMap
 
             // 更新 Preference 的列表数据
             updateSelectListEntries(widgetsPreference, pkgWidgetMap.keys)
@@ -171,7 +172,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
 
         // 管理已添加坐标的程序
         positionsPreference = findPreference("setting_activity_positions")
-        pkgPosMap = viewModel.settings.pkgPosMap
+        pkgPosMap = Settings.pkgPosMap
         updateSelectListEntries(positionsPreference, pkgPosMap.keys)
         positionsPreference?.setOnPreferenceChangeListener { _, newValue ->
             // 将 mapPackagePositions 和 newValue 做对比，删除掉 mapPackageWidgets 内多余的元素
@@ -182,9 +183,9 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
                     pkgPosMap.remove(key)
                 }
             }
-            viewModel.settings.pkgPosMap = pkgPosMap
+            Settings.pkgPosMap = pkgPosMap
 
-            DLog.d(TAG, "size:${viewModel.settings.pkgPosMap.size}==s:${pkgPosMap.size}")
+            DLog.d(TAG, "size:${Settings.pkgPosMap.size}==s:${pkgPosMap.size}")
             // 更新 Preference 的列表数据
             updateSelectListEntries(positionsPreference, pkgPosMap.keys)
 
@@ -212,7 +213,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
 
         // 包装每一个非白名单 pkg，用作列表数据
         val appInfoList = ArrayList<AppInformation>()
-        val whiteList = viewModel.settings.whiteListSet
+        val whiteList = Settings.whiteListSet
         pkgNameList.forEach { pkgName ->
             val info = manager.getApplicationInfo(pkgName, PackageManager.GET_META_DATA)
             val appInfo = AppInformation(pkgName, manager.getApplicationLabel(info).toString(), manager.getApplicationIcon(info))
@@ -257,7 +258,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
                     list.add(info.packageName)
                 }
             }
-            viewModel.settings.whiteListSet = list
+            Settings.whiteListSet = list
 
             // 通知 Service 更新白名单
             viewModel.dispatchServiceAction(PeacockService.ACTION_REFRESH_PACKAGE)
@@ -290,10 +291,10 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
             mainViewModel.handleUserIntent(MainUiIntent.ToPermissionIntent())
         } else {
             // 进行 onResume 操作
-            pkgWidgetMap = viewModel.settings.pkgWidgetMap
+            pkgWidgetMap = Settings.pkgWidgetMap
             updateSelectListEntries(widgetsPreference, pkgWidgetMap.keys)
 
-            pkgPosMap = viewModel.settings.pkgPosMap
+            pkgPosMap = Settings.pkgPosMap
             updateSelectListEntries(positionsPreference, pkgPosMap.keys)
 
             initPkgListDialog()

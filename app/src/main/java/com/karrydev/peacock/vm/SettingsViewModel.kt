@@ -8,8 +8,6 @@ import com.karrydev.peacock.model.Settings
 
 class SettingsViewModel : BaseMviViewModel() {
 
-    val settings by lazy { Settings }
-
     override fun handleUserIntent(intent: IUiIntent) {
         when (intent) {
             is SettingsIntent.OnKeywordsChangeIntent -> onKeywordsChange(intent.newValue)
@@ -18,7 +16,7 @@ class SettingsViewModel : BaseMviViewModel() {
     }
 
     private fun onKeywordsChange(newValue: String) {
-        settings.keywordList = newValue.split(" ").toList().toMutableList()
+        Settings.keywordList = newValue.split(" ").toMutableList()
 
         PeacockService.dispatchReceiverAction(PeacockService.ACTION_REFRESH_KEYWORDS)
 
