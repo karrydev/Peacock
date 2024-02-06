@@ -11,15 +11,17 @@ android {
         applicationId "com.karrydev.peacock"
         minSdk 24
         targetSdk 33
-        versionCode 1
-        versionName "1.0"
+        versionCode 1_00_00
+        versionName = getVersionName(versionCode)
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -27,12 +29,20 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = '1.8'
     }
 
     dataBinding {
         enabled = true
+    }
+
+    //打包后应用名称
+    applicationVariants.configureEach { variant ->
+        variant.outputs.configureEach { output ->
+            outputFileName = "Peacock_${defaultConfig.versionName}_${variant.buildType.name}.apk"
+        }
     }
 }
 
@@ -49,4 +59,11 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
     implementation 'com.google.code.gson:gson:2.8.9'
     implementation group: 'com.belerweb', name: 'pinyin4j', version: '2.5.1'
+}
+
+static def getVersionName(int versionCode) {
+    def b = (versionCode / 100 / 100).intValue()
+    def m = ((versionCode / 100).intValue() % 100).intValue()
+    def s = (versionCode % 100).intValue()
+    return "v$b.$m.$s"
 }
