@@ -1,4 +1,4 @@
-package com.karrydev.fasttouch
+package com.karrydev.peacock
 
 import org.junit.Test
 

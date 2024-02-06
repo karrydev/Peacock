@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data></data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFC107"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingStart="6dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="6dp"
+        android:paddingBottom="2dp">
+
+        <TableLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"
+            android:stretchColumns="1">
+
+            <TableRow
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp">
+
+                <TextView
+                    android:text="包名："
+                    android:textColor="@color/text_color"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tv_package_name"
+                    android:hint="显示当前应用的包名"
+                    android:singleLine="true"
+                    android:textColor="@color/text_color"
+                    android:textSize="12sp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp">
+
+                <TextView
+                    android:text="活动："
+                    android:textColor="@color/text_color"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tv_activity_name"
+                    android:hint="显示当前页面的活动名"
+                    android:singleLine="true"
+                    android:textColor="@color/text_color"
+                    android:textSize="12sp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp">
+
+                <TextView
+                    android:text="控件："
+                    android:textColor="@color/text_color"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tv_widget_info"
+                    android:layout_span="2"
+                    android:hint="显示控件信息"
+                    android:lines="2"
+                    android:ellipsize="end"
+                    android:textColor="@color/text_color"
+                    android:textSize="12sp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp">
+
+                <TextView
+                    android:text="坐标："
+                    android:textColor="@color/text_color"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tv_position_info"
+                    android:layout_span="2"
+                    android:hint="显示坐标信息"
+                    android:singleLine="true"
+                    android:textColor="@color/text_color"
+                    android:textSize="12sp" />
+            </TableRow>
+        </TableLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_show_outline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="1dp"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="显示布局"
+                android:textColor="@color/text_color"
+                android:textSize="10sp" />
+
+            <Button
+                android:id="@+id/btn_add_widget"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="1dp"
+                android:layout_weight="1"
+                android:enabled="false"
+                android:padding="0dp"
+                android:text="添加控件"
+                android:textColor="@color/text_color"
+                android:textSize="10sp" />
+
+            <Button
+                android:id="@+id/btn_show_target"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="1dp"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="显示准心"
+                android:textColor="@color/text_color"
+                android:textSize="10sp" />
+
+            <Button
+                android:id="@+id/btn_add_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="1dp"
+                android:layout_weight="1"
+                android:enabled="false"
+                android:padding="0dp"
+                android:text="添加坐标"
+                android:textColor="@color/text_color"
+                android:textSize="10sp" />
+
+            <Button
+                android:id="@+id/btn_dump_screen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="1dp"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="获取窗口"
+                android:textColor="@color/text_color"
+                android:textSize="10sp" />
+
+            <Button
+                android:id="@+id/btn_quit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="1dp"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="退出"
+                android:textColor="@color/text_color"
+                android:textSize="10sp" />
+
+        </LinearLayout>
+    </LinearLayout>
+</layout>

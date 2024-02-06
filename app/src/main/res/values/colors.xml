@@ -7,4 +7,11 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="text_color">#FF000000</color>
+    <color name="divide_line">#25000000</color>
+
+    <!--  PermissionFragment  -->
+    <color name="access_permission">#00FF00</color>
+    <color name="no_access_permission">#FF0000</color>
 </resources>
