@@ -11,7 +11,7 @@ android {
         applicationId "com.karrydev.peacock"
         minSdk 24
         targetSdk 33
-        versionCode 1_00_00
+        versionCode 1_00 // 0_01_00
         versionName = getVersionName(versionCode)
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
