@@ -18,7 +18,7 @@ class SettingsViewModel : BaseMviViewModel() {
     private fun onKeywordsChange(newValue: String) {
         Settings.keywordList = newValue.split(" ").toMutableList()
 
-        PeacockService.dispatchReceiverAction(PeacockService.ACTION_REFRESH_KEYWORDS)
+        PeacockService.dispatchReceiverAction(PeacockService.ACTION_REFRESH_KEYWORD)
 
         sendUiState { SettingsState.UpdateKeywordsState() }
     }

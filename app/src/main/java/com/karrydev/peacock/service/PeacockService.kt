@@ -10,13 +10,14 @@ class PeacockService : AccessibilityService() {
     private var serviceImpl: PeacockServiceImpl? = null
 
     companion object {
-        const val ACTION_REFRESH_KEYWORDS = 1
+        const val ACTION_REFRESH_KEYWORD = 1
         const val ACTION_REFRESH_PACKAGE = 2
-        const val ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS = 3
+        const val ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITION = 3
         const val ACTION_SHOW_CUSTOMIZATION_DIALOG = 4
-        const val ACTION_STOP_SERVICE = 5
-        const val ACTION_START_TASK = 6
-        const val ACTION_STOP_TASK = 7
+        const val ACTION_START_SERVICE = 5
+        const val ACTION_STOP_SERVICE = 6
+        const val ACTION_START_TASK = 7
+        const val ACTION_STOP_TASK = 8
 
         private var serviceInstance: WeakReference<PeacockService>? = null
 

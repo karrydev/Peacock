@@ -11,7 +11,7 @@ android {
         applicationId "com.karrydev.peacock"
         minSdk 24
         targetSdk 33
-        versionCode 1_00 // 0_01_00
+        versionCode 2_00 // 0_02_00
         versionName = getVersionName(versionCode)
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -51,6 +51,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'com.google.android.material:material:1.5.0'
     implementation 'androidx.preference:preference:1.2.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'

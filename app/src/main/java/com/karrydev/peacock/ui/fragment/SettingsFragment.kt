@@ -129,7 +129,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
                     showToast("Peacock服务未运行，请先打开无障碍服务!")
                     mainViewModel.dispatchIntent(MainUiIntent.CheckPermissionIntent())
                 }
-                
+
                 true
             }
         }
@@ -165,7 +165,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
             updateSelectListEntries(widgetsPreference, pkgWidgetMap.keys)
 
             // 发送消息通知 Service 更新 Widget 数据
-            viewModel.dispatchServiceAction(PeacockService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS)
+            viewModel.dispatchServiceAction(PeacockService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITION)
 
             true
         }
@@ -190,7 +190,7 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
             updateSelectListEntries(positionsPreference, pkgPosMap.keys)
 
             // 发送消息通知 Service 更新 Widget 数据
-            viewModel.dispatchServiceAction(PeacockService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS)
+            viewModel.dispatchServiceAction(PeacockService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITION)
 
             true
         }
@@ -217,9 +217,11 @@ class SettingsFragment : BaseMviPreferenceFragment<SettingsViewModel>() {
         pkgNameList.forEach { pkgName ->
             val info = manager.getApplicationInfo(pkgName, PackageManager.GET_META_DATA)
             val appInfo = AppInformation(pkgName, manager.getApplicationLabel(info).toString(), manager.getApplicationIcon(info))
-            appInfoList.add(appInfo.copy(
-                checkFlag = whiteList.contains(pkgName)
-            ))
+            appInfoList.add(
+                appInfo.copy(
+                    checkFlag = whiteList.contains(pkgName)
+                )
+            )
         }
         appInfoList.sort()
 

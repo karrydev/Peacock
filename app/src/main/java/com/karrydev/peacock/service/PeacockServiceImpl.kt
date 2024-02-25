@@ -44,6 +44,7 @@ import kotlin.math.roundToInt
 
 class PeacockServiceImpl(private val service: AccessibilityService) {
 
+    private var serviceRunning = false
     private val selfPkgName = "Peacock"
     private var curPkgName = ""
     private var curActName = ""
@@ -137,7 +138,7 @@ class PeacockServiceImpl(private val service: AccessibilityService) {
      */
     private fun initMainHandler() = Handler(Looper.getMainLooper()) { msg ->
         when (msg.what) {
-            PeacockService.ACTION_REFRESH_KEYWORDS -> { // 更新 keywords
+            PeacockService.ACTION_REFRESH_KEYWORD -> { // 更新 keywords
                 keywordList = Settings.keywordList
             }
 
@@ -147,13 +148,17 @@ class PeacockServiceImpl(private val service: AccessibilityService) {
                 findAllPackages()
             }
 
-            PeacockService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITIONS -> { // 更新用户自定义跳过的内容
+            PeacockService.ACTION_REFRESH_CUSTOMIZED_WIDGETS_POSITION -> { // 更新用户自定义跳过的内容
                 pkgPosMap = Settings.pkgPosMap
                 pkgWidgetMap = Settings.pkgWidgetMap
             }
 
-            PeacockService.ACTION_STOP_SERVICE -> { // 关闭无障碍服务
-                service.disableSelf()
+            PeacockService.ACTION_START_SERVICE -> { // 开启无障碍服务（允许启动新任务）
+                serviceRunning = true
+            }
+
+            PeacockService.ACTION_STOP_SERVICE -> { // 关闭无障碍服务（仅是不允许启动新任务，而不是直接关闭系统服务）
+                serviceRunning = false
             }
 
             PeacockService.ACTION_SHOW_CUSTOMIZATION_DIALOG -> { // 打开用户自定义跳过方法弹窗
