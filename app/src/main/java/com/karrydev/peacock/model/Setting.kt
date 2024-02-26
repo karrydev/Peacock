@@ -24,7 +24,7 @@ object Setting {
     private lateinit var gson: Gson
 
     /**
-     *  跳过广告时是否显示通知
+     *  跳过广告时是否显示toast提示
      */
     private const val SHOW_SKIP_AD_TOAST_FLAG = "show_skip_ad_toast_flag"
     var showSkipAdToastFlag = false
@@ -39,11 +39,11 @@ object Setting {
     /**
      *  展示前台通知
      */
-    private const val SHOW_FOREGROUND_NOTIFICATION_FLAG = "show_foreground_notification_flag"
-    var showForegroundNotification = false
+    private const val SHOW_NOTIFICATION_FLAG = "show_notification_flag"
+    var showNotification = false
         set(value) {
             if (value != field) {
-                editor.putBoolean(SHOW_FOREGROUND_NOTIFICATION_FLAG, value)
+                editor.putBoolean(SHOW_NOTIFICATION_FLAG, value)
                 editor.apply()
                 field = value
             }
@@ -95,7 +95,7 @@ object Setting {
      * 用户添加的控件集合
      */
     private const val PACKAGE_WIDGETS_LIST = "PACKAGE_WIDGETS_LIST"
-    var pkgWidgetMap = TreeMap<String, Set<PackageWidgetDescription>>()
+    var pkgWidgetMap = TreeMap<String, List<WidgetDesc>>()
         set(value) {
             field = value
             editor.putString(PACKAGE_WIDGETS_LIST, gson.toJson(field))
@@ -103,7 +103,7 @@ object Setting {
         }
     fun setPackageWidgetsInString(value: String): Boolean {
         return try {
-            pkgWidgetMap = gson.fromJson(value, TreeMap<String, Set<PackageWidgetDescription>>().javaClass)
+            pkgWidgetMap = gson.fromJson(value, pkgWidgetMap.javaClass)
             true
         } catch (e: JsonSyntaxException) {
             false
@@ -114,7 +114,7 @@ object Setting {
      * 用户添加的坐标集合
      */
     private const val PACKAGE_POSITIONS_LIST = "PACKAGE_POSITIONS_LIST"
-    var pkgPosMap = TreeMap<String, PackagePositionDescription>()
+    var pkgPosMap = TreeMap<String, PosDesc>()
         set(value) {
             field = value
             editor.putString(PACKAGE_POSITIONS_LIST, gson.toJson(field))
@@ -158,13 +158,13 @@ object Setting {
         // 加载用户添加的控件
         json = sp.getString(PACKAGE_WIDGETS_LIST, null)
         if (json != null) {
-            pkgWidgetMap.putAll(gson.fromJson(json, TreeMap<String, Set<PackageWidgetDescription>>().javaClass))
+            pkgWidgetMap.putAll(gson.fromJson(json, pkgWidgetMap.javaClass))
         }
 
         // 加载用户添加的坐标
         json = sp.getString(PACKAGE_POSITIONS_LIST, null)
         if (json != null) {
-            pkgPosMap.putAll(gson.fromJson(json, TreeMap<String, PackagePositionDescription>().javaClass))
+            pkgPosMap.putAll(gson.fromJson(json, pkgPosMap.javaClass))
         }
     }
 }

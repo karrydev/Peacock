@@ -12,12 +12,14 @@ import com.karrydev.peacock.R
 import com.karrydev.peacock.base.BaseActivity
 import com.karrydev.peacock.databinding.ActivitySettingBinding
 import com.karrydev.peacock.model.Setting
+import com.karrydev.peacock.service.ForegroundService
 import com.karrydev.peacock.vm.SettingViewModel
 
 class SettingActivity : BaseActivity<SettingViewModel, ActivitySettingBinding>() {
 
     override val layoutId = R.layout.activity_setting
-    private lateinit var notificationLauncher: ActivityResultLauncher<Intent>
+    private lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
+    private var foregroundServiceIntent: Intent? = null
 
     companion object {
         const val TAG = "SettingActivity"
@@ -27,25 +29,16 @@ class SettingActivity : BaseActivity<SettingViewModel, ActivitySettingBinding>()
         super.onCreate(savedInstanceState)
 
         // 这里需要在onCreate中注册
-        // 打开通知设置界面
-        // TODO 考虑一下如何传入这个扩展函数
-        notificationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (viewModel.checkNotificationPermission()) {
-                // 打开前台通知
-                Setting.showForegroundNotification = true
-            } else {
-                // TODO 弹窗提示：提示需要通知权限
-                binding.cbNotification.isChecked = false
-            }
+        activityResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            globalViewModel.activityResultCallback?.invoke()
         }
     }
 
     override fun onResume() {
         super.onResume()
         if (!viewModel.checkNotificationPermission()) {
-            // 若通知权限未获取，关闭通知相关设置
-            binding.cbNotification.isChecked = false
-            binding.cbForeground.isChecked = false
+            // 若通知权限未获取，关闭与通知相关的设置
+            missNotificationPermission()
         }
     }
 
@@ -61,19 +54,58 @@ class SettingActivity : BaseActivity<SettingViewModel, ActivitySettingBinding>()
     }
 
     override fun initListener() {
-        // 跳过广告时显示通知
+        // 跳过广告时显示提示
+        binding.cbToast.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                if (!viewModel.checkNotificationPermission()) {
+                    // TODO 展示通知权限获取弹窗，再执行以下逻辑
+                    // 打开通知设置界面
+                    globalViewModel.activityResultCallback = {
+                        if (viewModel.checkNotificationPermission()) {
+                            // 开启跳过提示
+                            Setting.showSkipAdToastFlag = true
+                        } else {
+                            // TODO 弹窗提示：提示需要通知权限
+                            missNotificationPermission()
+                        }
+                    }
+                    val it = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    activityResultLauncher.launch(it)
+                } else {
+                    Setting.showSkipAdToastFlag = true
+                }
+            } else {
+                Setting.showSkipAdToastFlag = false
+            }
+        }
+
+        // 展示前台通知
         binding.cbNotification.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 if (!viewModel.checkNotificationPermission()) {
                     // TODO 展示通知权限获取弹窗，再执行以下逻辑
+                    // 打开通知设置界面
+                    globalViewModel.activityResultCallback = {
+                        if (viewModel.checkNotificationPermission()) {
+                            // 打开前台通知
+                            Setting.showNotification = true
+                            startNotification()
+                        } else {
+                            // TODO 弹窗提示：提示需要通知权限
+                            missNotificationPermission()
+                        }
+                    }
                     val it = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                         .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    notificationLauncher.launch(it)
+                    activityResultLauncher.launch(it)
                 } else {
-                    Setting.showForegroundNotification = true
+                    Setting.showNotification = true
+                    startNotification()
                 }
             } else {
-                Setting.showForegroundNotification = false
+                Setting.showNotification = false
+                stopNotification()
             }
         }
 
@@ -88,16 +120,42 @@ class SettingActivity : BaseActivity<SettingViewModel, ActivitySettingBinding>()
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 Setting.skipAdDuration = binding.tvDuration.text.toString().toInt()
             }
-
         })
+
+        // 电池优化设置
+        binding.tvPower.setOnClickListener {
+            //  打开电池优化的界面，让用户设置
+            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            startActivity(intent)
+        }
     }
 
-//    private fun getNotificationPermission(onComplete: (res: Boolean) -> Unit) {
-//        // 打开通知设置界面
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            .launch(it)
-//        }
-//    }
+    private fun missNotificationPermission() {
+        binding.cbToast.isChecked = false
+        binding.cbNotification.isChecked = false
+        Setting.showSkipAdToastFlag = false
+        Setting.showNotification = false
+        stopNotification()
+    }
+
+    private fun startNotification() {
+        // 开启前台通知
+        if (foregroundServiceIntent == null) {
+            foregroundServiceIntent = Intent(this, ForegroundService::class.java)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(foregroundServiceIntent)
+        } else {
+            startService(foregroundServiceIntent)
+        }
+    }
+
+    private fun stopNotification() {
+        // 关闭前台通知
+        if (foregroundServiceIntent != null) {
+            stopService(foregroundServiceIntent)
+        }
+    }
 
     override fun getViewModelClass() = SettingViewModel::class.java
 }

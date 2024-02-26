@@ -42,6 +42,11 @@
         </activity>
 
         <service
+            android:name=".service.ForegroundService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <service
             android:name=".service.PeacockService"
             android:enabled="true"
             android:exported="true"

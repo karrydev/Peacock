@@ -1,14 +1,9 @@
 package com.karrydev.peacock.ui
 
 import android.content.Intent
-import android.os.Bundle
-import android.os.PersistableBundle
 import android.provider.Settings
-import androidx.activity.viewModels
-import androidx.databinding.DataBindingUtil
 import com.karrydev.peacock.R
 import com.karrydev.peacock.base.BaseActivity
-import com.karrydev.peacock.base.BaseViewModel
 import com.karrydev.peacock.databinding.ActivityNewMainBinding
 import com.karrydev.peacock.service.PeacockService
 import com.karrydev.peacock.vm.NewMainViewModel
@@ -47,6 +42,9 @@ class NewMainActivity : BaseActivity<NewMainViewModel, ActivityNewMainBinding>()
         }
         binding.cardSetting.setOnClickListener {
             toSettingActivity()
+        }
+        binding.cardAbout.setOnClickListener {
+
         }
     }
 
